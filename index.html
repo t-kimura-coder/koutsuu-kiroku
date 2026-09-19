@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="走行距離">
+<title>走行距離メモ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="listView" class="view">
+  <header class="topbar">
+    <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
+    <div class="periodLabel">
+      <div id="periodTitle">-</div>
+      <div id="periodName" class="sub">氏名未設定</div>
+    </div>
+    <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
+  </header>
+
+  <div id="dayList" class="dayList"></div>
+
+  <footer class="bottombar">
+    <label class="checkboxField">
+      <input type="checkbox" id="saveOriginalCheckbox">
+      <span>撮影時に元画像も写真アプリへ保存する</span>
+    </label>
+    <button id="nameBtn" class="ghostBtn">氏名を設定</button>
+  </footer>
+</div>
+
+<div id="detailView" class="view" hidden>
+  <header class="topbar">
+    <button id="backBtn" class="navBtn" aria-label="戻る">◀ 戻る</button>
+    <div class="periodLabel">
+      <div id="detailDate">-</div>
+    </div>
+    <div style="width:2.5em"></div>
+  </header>
+
+  <div class="detailBody">
+    <div class="photoRow">
+      <div class="photoSlot">
+        <div class="photoSlotLabel">開始距離の写真</div>
+        <div class="photoBox" id="photoBoxStart">
+          <img id="photoPreviewStart" hidden>
+          <div id="photoPlaceholderStart" class="photoPlaceholder">タップして撮影／選択</div>
+        </div>
+        <div class="photoSlotActions">
+          <button id="retakePhotoStartBtn" class="photoSlotAction" hidden>撮り直す</button>
+          <button id="removePhotoStartBtn" class="photoSlotAction dangerText" hidden>削除</button>
+        </div>
+      </div>
+      <div class="photoSlot">
+        <div class="photoSlotLabel">終了距離の写真</div>
+        <div class="photoBox" id="photoBoxEnd">
+          <img id="photoPreviewEnd" hidden>
+          <div id="photoPlaceholderEnd" class="photoPlaceholder">タップして撮影／選択</div>
+        </div>
+        <div class="photoSlotActions">
+          <button id="retakePhotoEndBtn" class="photoSlotAction" hidden>撮り直す</button>
+          <button id="removePhotoEndBtn" class="photoSlotAction dangerText" hidden>削除</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+
+    <label class="field">
+      <span>行き先・業務内容</span>
+      <textarea id="destinationInput" rows="2" placeholder="例）通勤 / 自宅～現場名～会社～自宅"></textarea>
+    </label>
+
+    <div class="fieldRow">
+      <label class="field">
+        <span>開始距離（始針）</span>
+        <input type="number" id="startInput" inputmode="decimal" step="0.1" placeholder="例）87604.0">
+      </label>
+      <label class="field">
+        <span>終了距離（終針）</span>
+        <input type="number" id="endInput" inputmode="decimal" step="0.1" placeholder="例）87620.0">
+      </label>
+    </div>
+
+    <label class="checkboxField">
+      <input type="checkbox" id="breakCheckbox">
+      <span>中抜け（私用での移動）あり</span>
+    </label>
+
+    <div id="breakFieldRow" class="fieldRow" hidden>
+      <label class="field">
+        <span>再開距離（中抜け後の始針）</span>
+        <input type="number" id="start2Input" inputmode="decimal" step="0.1" placeholder="例）87630.0">
+      </label>
+      <label class="field">
+        <span>終了距離2（終針）</span>
+        <input type="number" id="end2Input" inputmode="decimal" step="0.1" placeholder="例）87650.0">
+      </label>
+    </div>
+
+    <div id="distanceSummary" class="summary"></div>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox" hidden>
+  <button id="lightboxCloseBtn" class="lightboxCloseBtn" aria-label="閉じる">✕</button>
+  <img id="lightboxImg">
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
