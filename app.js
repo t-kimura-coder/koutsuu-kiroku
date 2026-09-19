@@ -198,11 +198,13 @@ const photoPreviewStart = document.getElementById("photoPreviewStart");
 const photoPlaceholderStart = document.getElementById("photoPlaceholderStart");
 const retakePhotoStartBtn = document.getElementById("retakePhotoStartBtn");
 const removePhotoStartBtn = document.getElementById("removePhotoStartBtn");
+const saveOriginalStartBtn = document.getElementById("saveOriginalStartBtn");
 const photoBoxEnd = document.getElementById("photoBoxEnd");
 const photoPreviewEnd = document.getElementById("photoPreviewEnd");
 const photoPlaceholderEnd = document.getElementById("photoPlaceholderEnd");
 const retakePhotoEndBtn = document.getElementById("retakePhotoEndBtn");
 const removePhotoEndBtn = document.getElementById("removePhotoEndBtn");
+const saveOriginalEndBtn = document.getElementById("saveOriginalEndBtn");
 const photoInput = document.getElementById("photoInput");
 const destinationInput = document.getElementById("destinationInput");
 const startInput = document.getElementById("startInput");
@@ -328,6 +330,8 @@ async function renderList() {
 let currentPhotoStart = null;
 let currentPhotoEnd = null;
 let pendingSlot = null; // "start" | "end"
+let originalPhotoStart = null; // 撮影直後の元画像（保存ボタン用、セッション内のみ）
+let originalPhotoEnd = null;
 
 async function openDetail(dateKey) {
   currentDetailDate = dateKey;
@@ -339,6 +343,10 @@ async function openDetail(dateKey) {
   const rec = await getRecord(dateKey);
   currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
   currentPhotoEnd = rec && rec.photoEnd ? rec.photoEnd : null;
+  originalPhotoStart = null;
+  originalPhotoEnd = null;
+  saveOriginalStartBtn.hidden = true;
+  saveOriginalEndBtn.hidden = true;
   refreshPhotoPreview("start");
   refreshPhotoPreview("end");
 
@@ -511,8 +519,16 @@ photoInput.addEventListener("change", async () => {
   const slot = pendingSlot;
   pendingSlot = null;
   if (!file || !slot) return;
+  const saveOriginalBtn = slot === "start" ? saveOriginalStartBtn : saveOriginalEndBtn;
   if (getSaveOriginalSetting()) {
-    tryShareOriginal(file);
+    if (slot === "start") {
+      originalPhotoStart = file;
+    } else {
+      originalPhotoEnd = file;
+    }
+    saveOriginalBtn.hidden = false;
+  } else {
+    saveOriginalBtn.hidden = true;
   }
   let blob;
   try {
@@ -530,9 +546,21 @@ photoInput.addEventListener("change", async () => {
   photoInput.value = "";
 });
 
+saveOriginalStartBtn.addEventListener("click", (ev) => {
+  ev.stopPropagation();
+  tryShareOriginal(originalPhotoStart);
+});
+
+saveOriginalEndBtn.addEventListener("click", (ev) => {
+  ev.stopPropagation();
+  tryShareOriginal(originalPhotoEnd);
+});
+
 removePhotoStartBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
   currentPhotoStart = null;
+  originalPhotoStart = null;
+  saveOriginalStartBtn.hidden = true;
   refreshPhotoPreview("start");
   await saveCurrentDetail();
 });
@@ -540,6 +568,8 @@ removePhotoStartBtn.addEventListener("click", async (ev) => {
 removePhotoEndBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
   currentPhotoEnd = null;
+  originalPhotoEnd = null;
+  saveOriginalEndBtn.hidden = true;
   refreshPhotoPreview("end");
   await saveCurrentDetail();
 });

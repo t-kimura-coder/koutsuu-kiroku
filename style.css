@@ -223,6 +223,14 @@ html, body {
   color: var(--danger);
 }
 
+.saveOriginalBtn {
+  margin-top: 6px;
+  font-size: 12px;
+  padding: 8px 4px;
+  color: #2a9d5c;
+  border-color: #2a9d5c;
+}
+
 .lightbox {
   position: fixed;
   inset: 0;
