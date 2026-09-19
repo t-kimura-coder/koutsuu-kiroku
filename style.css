@@ -3,7 +3,8 @@
   --card: #ffffff;
   --text: #222;
   --sub: #888;
-  --accent: #2f6fed;
+  --accent: #187a4d;
+  --header-bg: #eaf6f0;
   --danger: #d64545;
   --sun: #d64545;
   --sat: #2f6fed;
@@ -18,7 +19,8 @@
     --card: #1f2226;
     --text: #eaeaea;
     --sub: #9aa0a6;
-    --accent: #6fa8ff;
+    --accent: #4fcd91;
+    --header-bg: #16261f;
     --danger: #ff6b6b;
     --sun: #ff6b6b;
     --sat: #6fa8ff;
@@ -33,7 +35,8 @@
   --card: #1f2226;
   --text: #eaeaea;
   --sub: #9aa0a6;
-  --accent: #6fa8ff;
+  --accent: #4fcd91;
+  --header-bg: #16261f;
   --danger: #ff6b6b;
   --sun: #ff6b6b;
   --sat: #6fa8ff;
@@ -69,8 +72,9 @@ html, body {
   justify-content: space-between;
   padding: env(safe-area-inset-top, 0) 8px 8px 8px;
   padding-top: calc(env(safe-area-inset-top, 0) + 10px);
-  background: var(--card);
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
   position: sticky;
   top: 0;
   z-index: 10;
