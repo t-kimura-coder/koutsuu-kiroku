@@ -183,11 +183,14 @@ function tryShareOriginal(file) {
 
 const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
+const settingsView = document.getElementById("settingsView");
 const periodTitleEl = document.getElementById("periodTitle");
 const periodNameEl = document.getElementById("periodName");
 const dayListEl = document.getElementById("dayList");
 const prevPeriodBtn = document.getElementById("prevPeriod");
 const nextPeriodBtn = document.getElementById("nextPeriod");
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+const settingsBackBtn = document.getElementById("settingsBackBtn");
 const nameBtn = document.getElementById("nameBtn");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
 
@@ -478,6 +481,17 @@ nameBtn.addEventListener("click", () => {
     setUserName(next.trim());
     renderList();
   }
+});
+
+openSettingsBtn.addEventListener("click", () => {
+  listView.hidden = true;
+  settingsView.hidden = false;
+});
+
+settingsBackBtn.addEventListener("click", () => {
+  settingsView.hidden = true;
+  listView.hidden = false;
+  renderList();
 });
 
 saveOriginalCheckbox.checked = getSaveOriginalSetting();

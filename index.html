@@ -22,18 +22,29 @@
       <div id="periodTitle">-</div>
       <div id="periodName" class="sub">氏名未設定</div>
     </div>
+    <button id="openSettingsBtn" class="navBtn" aria-label="設定">⚙</button>
     <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
   </header>
 
   <div id="dayList" class="dayList"></div>
+</div>
 
-  <footer class="bottombar">
+<div id="settingsView" class="view" hidden>
+  <header class="topbar">
+    <button id="settingsBackBtn" class="navBtn" aria-label="戻る">◀ 戻る</button>
+    <div class="periodLabel">
+      <div>設定</div>
+    </div>
+    <div style="width:2.5em"></div>
+  </header>
+
+  <div class="detailBody">
     <label class="checkboxField">
       <input type="checkbox" id="saveOriginalCheckbox">
       <span>撮影時に元画像も写真アプリへ保存する</span>
     </label>
     <button id="nameBtn" class="ghostBtn">氏名を設定</button>
-  </footer>
+  </div>
 </div>
 
 <div id="detailView" class="view" hidden>
