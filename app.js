@@ -225,6 +225,7 @@ const settingsBackBtn = document.getElementById("settingsBackBtn");
 const nameBtn = document.getElementById("nameBtn");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
 const themeSelect = document.getElementById("themeSelect");
+const exportBtn = document.getElementById("exportBtn");
 
 const backBtn = document.getElementById("backBtn");
 const detailDateEl = document.getElementById("detailDate");
@@ -466,6 +467,45 @@ function updateSummary() {
   distanceSummary.textContent = `走行距離: ${total.toFixed(1)} km`;
 }
 
+/* ---------- 月次出力 ---------- */
+
+async function exportCurrentPeriod() {
+  const start = currentPeriodStart;
+  const end = periodEndFor(start);
+  const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
+
+  const payload = {
+    name: getUserName(),
+    periodStart: fmtKey(start),
+    periodEnd: fmtKey(end),
+    records: records.map((r) => ({
+      date: r.date,
+      destination: r.destination || "",
+      start: r.start,
+      end: r.end,
+      hasBreak: !!r.hasBreak,
+      start2: r.start2,
+      end2: r.end2,
+    })),
+  };
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const fileName = `走行距離_${payload.name || "未設定"}_${payload.periodStart}.json`;
+  const file = new File([blob], fileName, { type: "application/json" });
+
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: fileName });
+      return;
+    } catch (e) {
+      /* ユーザーがキャンセルした場合など */
+      return;
+    }
+  }
+  alert("この端末では共有機能が使えないため、ファイルを直接送信できません。");
+}
+
 async function saveCurrentDetail() {
   if (!currentDetailDate) return;
   const s = startInput.value !== "" ? parseFloat(startInput.value) : null;
@@ -524,6 +564,8 @@ openSettingsBtn.addEventListener("click", () => {
 themeSelect.addEventListener("change", () => {
   setTheme(themeSelect.value);
 });
+
+exportBtn.addEventListener("click", exportCurrentPeriod);
 
 settingsBackBtn.addEventListener("click", () => {
   settingsView.hidden = true;

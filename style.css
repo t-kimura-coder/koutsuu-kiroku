@@ -220,6 +220,14 @@ html, body {
   background: var(--card);
 }
 
+.exportHint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--sub);
+  text-align: center;
+  word-break: break-all;
+}
+
 .ghostBtn {
   width: 100%;
   padding: 12px;
