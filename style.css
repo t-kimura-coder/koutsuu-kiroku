@@ -386,9 +386,13 @@ html, body {
   font-size: 13px;
   color: var(--sub);
   flex: 1;
+  min-width: 0;
 }
 
 .field input, .field textarea, .field select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font-size: 15px;
   padding: 10px;
   border-radius: 8px;
