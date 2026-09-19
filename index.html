@@ -30,7 +30,10 @@
 
   <footer class="bottombar">
     <button id="exportBtn" class="ghostBtn">📤 今月分をメールで送信</button>
-    <div class="exportHint">送信先: [REDACTED]（初回は手入力、以降は候補から選べます）</div>
+    <div class="exportHintRow">
+      <span id="exportHintText" class="exportHint">送信先: 未設定（設定画面で入力してください）</span>
+      <button id="copyEmailBtn" class="copyEmailBtn">📋 コピー</button>
+    </div>
   </footer>
 </div>
 
@@ -49,6 +52,11 @@
       <span>撮影時に元画像も写真アプリへ保存する</span>
     </label>
     <button id="nameBtn" class="ghostBtn">氏名を設定</button>
+
+    <label class="field">
+      <span>月次送信先メールアドレス（Boxのアップロード用）</span>
+      <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
+    </label>
 
     <label class="field">
       <span>テーマ</span>

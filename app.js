@@ -226,6 +226,9 @@ const nameBtn = document.getElementById("nameBtn");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
 const themeSelect = document.getElementById("themeSelect");
 const exportBtn = document.getElementById("exportBtn");
+const exportHintText = document.getElementById("exportHintText");
+const copyEmailBtn = document.getElementById("copyEmailBtn");
+const boxEmailInput = document.getElementById("boxEmailInput");
 
 const backBtn = document.getElementById("backBtn");
 const detailDateEl = document.getElementById("detailDate");
@@ -263,6 +266,9 @@ async function renderList() {
   const name = getUserName();
   periodNameEl.textContent = name ? `${name} さん` : "氏名未設定";
   nameBtn.textContent = name ? "氏名を変更" : "氏名を設定";
+
+  const boxEmail = getBoxEmail();
+  exportHintText.textContent = boxEmail ? `送信先: ${boxEmail}` : "送信先: 未設定（設定画面で入力してください）";
 
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
   const recordMap = new Map(records.map((r) => [r.date, r]));
@@ -469,6 +475,24 @@ function updateSummary() {
 
 /* ---------- 月次出力 ---------- */
 
+const BOX_EMAIL_KEY = "koutsuu-kiroku-box-email";
+
+function getBoxEmail() {
+  try {
+    return localStorage.getItem(BOX_EMAIL_KEY) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function setBoxEmail(value) {
+  try {
+    localStorage.setItem(BOX_EMAIL_KEY, value);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 async function exportCurrentPeriod() {
   const start = currentPeriodStart;
   const end = periodEndFor(start);
@@ -557,8 +581,13 @@ nameBtn.addEventListener("click", () => {
 
 openSettingsBtn.addEventListener("click", () => {
   themeSelect.value = getTheme();
+  boxEmailInput.value = getBoxEmail();
   listView.hidden = true;
   settingsView.hidden = false;
+});
+
+boxEmailInput.addEventListener("blur", () => {
+  setBoxEmail(boxEmailInput.value.trim());
 });
 
 themeSelect.addEventListener("change", () => {
@@ -566,6 +595,23 @@ themeSelect.addEventListener("change", () => {
 });
 
 exportBtn.addEventListener("click", exportCurrentPeriod);
+
+copyEmailBtn.addEventListener("click", async () => {
+  const email = getBoxEmail();
+  if (!email) {
+    alert("設定画面で送信先メールアドレスを入力してください。");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(email);
+    copyEmailBtn.textContent = "✓ コピーしました";
+  } catch (e) {
+    copyEmailBtn.textContent = "コピー失敗";
+  }
+  setTimeout(() => {
+    copyEmailBtn.textContent = "📋 コピー";
+  }, 1500);
+});
 
 settingsBackBtn.addEventListener("click", () => {
   settingsView.hidden = true;
