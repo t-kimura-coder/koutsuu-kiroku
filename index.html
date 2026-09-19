@@ -54,8 +54,26 @@
     <button id="nameBtn" class="ghostBtn">氏名を設定</button>
 
     <label class="field">
+      <span>車両情報（年式）</span>
+      <input type="text" id="vehicleYearInput" placeholder="例）令和3">
+    </label>
+    <label class="field">
+      <span>車両情報（車種）</span>
+      <input type="text" id="vehicleModelInput" placeholder="例）カローラフィールダー">
+    </label>
+    <label class="field">
+      <span>車両情報（排気量）</span>
+      <input type="text" id="engineDisplacementInput" placeholder="例）1490">
+    </label>
+
+    <label class="field">
       <span>月次送信先メールアドレス（Boxのアップロード用）</span>
       <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
+    </label>
+
+    <label class="checkboxField">
+      <input type="checkbox" id="autoBackupCheckbox">
+      <span>一覧に戻るたびに自動でバックアップ送信する（前回送信から一定時間が経っていた場合のみ）</span>
     </label>
 
     <label class="field">
@@ -140,6 +158,7 @@
     </div>
 
     <div id="distanceSummary" class="summary"></div>
+    <div id="warningBox" class="warningBox" hidden></div>
   </div>
 </div>
 

@@ -11,6 +11,7 @@
   --border: #e3e5e9;
   --muted-bg: #eee;
   --muted-fg: #bbb;
+  --warning-bg: #fdeaea;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,6 +28,7 @@
     --border: #33373d;
     --muted-bg: #2a2d33;
     --muted-fg: #6b7178;
+    --warning-bg: #3a2020;
   }
 }
 
@@ -43,6 +45,7 @@
   --border: #33373d;
   --muted-bg: #2a2d33;
   --muted-fg: #6b7178;
+  --warning-bg: #3a2020;
 }
 
 * { box-sizing: border-box; }
@@ -444,4 +447,14 @@ html, body {
   font-weight: 600;
   color: var(--sub);
   margin-bottom: 4px;
+}
+
+.warningBox {
+  font-size: 13px;
+  color: var(--danger);
+  background: var(--warning-bg);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
 }

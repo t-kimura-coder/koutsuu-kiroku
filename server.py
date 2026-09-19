@@ -1,3 +1,4 @@
+import sys
 import http.server
 import socketserver
 
@@ -13,6 +14,10 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    with socketserver.TCPServer(("0.0.0.0", PORT), NoCacheHandler) as httpd:
-        print(f"Serving on 0.0.0.0:{PORT} (no-cache)")
+    # 既定はlocalhostのみ。スマホ実機テスト等でLANに公開したい場合は
+    # 明示的に `python server.py --lan` を指定する(誤って業務フォルダ等を
+    # 無認証で同一Wi-Fiに晒さないための安全策)。
+    host = "0.0.0.0" if "--lan" in sys.argv else "127.0.0.1"
+    with socketserver.TCPServer((host, PORT), NoCacheHandler) as httpd:
+        print(f"Serving on {host}:{PORT} (no-cache)")
         httpd.serve_forever()

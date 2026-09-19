@@ -188,6 +188,72 @@ function tryShareOriginal(file) {
   });
 }
 
+/* ---------- 車両情報 ---------- */
+
+const VEHICLE_KEYS = {
+  vehicleYear: "koutsuu-kiroku-vehicle-year",
+  vehicleModel: "koutsuu-kiroku-vehicle-model",
+  engineDisplacement: "koutsuu-kiroku-engine-displacement",
+};
+
+function getVehicleInfo() {
+  const info = {};
+  for (const [field, key] of Object.entries(VEHICLE_KEYS)) {
+    try {
+      info[field] = localStorage.getItem(key) || "";
+    } catch (e) {
+      info[field] = "";
+    }
+  }
+  return info;
+}
+
+function setVehicleField(field, value) {
+  try {
+    localStorage.setItem(VEHICLE_KEYS[field], value);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+/* ---------- 自動バックアップ設定 ---------- */
+
+const AUTO_BACKUP_KEY = "koutsuu-kiroku-auto-backup";
+const AUTO_BACKUP_LAST_KEY = "koutsuu-kiroku-auto-backup-last";
+const AUTO_BACKUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6時間
+
+function getAutoBackupSetting() {
+  try {
+    return localStorage.getItem(AUTO_BACKUP_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function setAutoBackupSetting(value) {
+  try {
+    localStorage.setItem(AUTO_BACKUP_KEY, value ? "1" : "0");
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function getLastAutoBackupAt() {
+  try {
+    return parseInt(localStorage.getItem(AUTO_BACKUP_LAST_KEY) || "0", 10);
+  } catch (e) {
+    return 0;
+  }
+}
+
+function setLastAutoBackupAt(timestamp) {
+  try {
+    localStorage.setItem(AUTO_BACKUP_LAST_KEY, String(timestamp));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 /* ---------- テーマ設定 ---------- */
 
 const THEME_KEY = "koutsuu-kiroku-theme";
@@ -238,6 +304,11 @@ const exportBtn = document.getElementById("exportBtn");
 const exportHintText = document.getElementById("exportHintText");
 const copyEmailBtn = document.getElementById("copyEmailBtn");
 const boxEmailInput = document.getElementById("boxEmailInput");
+const vehicleYearInput = document.getElementById("vehicleYearInput");
+const vehicleModelInput = document.getElementById("vehicleModelInput");
+const engineDisplacementInput = document.getElementById("engineDisplacementInput");
+const autoBackupCheckbox = document.getElementById("autoBackupCheckbox");
+const warningBox = document.getElementById("warningBox");
 
 const backBtn = document.getElementById("backBtn");
 const detailDateEl = document.getElementById("detailDate");
@@ -268,7 +339,12 @@ const distanceSummary = document.getElementById("distanceSummary");
 
 /* ---------- 一覧描画 ---------- */
 
+let activeThumbUrls = [];
+
 async function renderList() {
+  activeThumbUrls.forEach((url) => URL.revokeObjectURL(url));
+  activeThumbUrls = [];
+
   const start = currentPeriodStart;
   const end = periodEndFor(start);
   periodTitleEl.textContent = fmtPeriodTitle(start, end);
@@ -307,7 +383,9 @@ async function renderList() {
       img.style.width = "100%";
       img.style.height = "100%";
       img.style.objectFit = "cover";
-      img.src = URL.createObjectURL(thumbSource);
+      const thumbUrl = URL.createObjectURL(thumbSource);
+      activeThumbUrls.push(thumbUrl);
+      img.src = thumbUrl;
       thumb.appendChild(img);
     } else {
       thumb.innerHTML = CAMERA_ICON_SVG;
@@ -383,6 +461,7 @@ let currentPhotoEnd = null;
 let pendingSlot = null; // "start" | "end"
 let originalPhotoStart = null; // 撮影直後の元画像（保存ボタン用、セッション内のみ）
 let originalPhotoEnd = null;
+let previousDayEnd = null; // 前日の最終メーター値(逆行チェック用)
 
 async function openDetail(dateKey) {
   currentDetailDate = dateKey;
@@ -390,6 +469,10 @@ async function openDetail(dateKey) {
   const dateObj = new Date(y, m - 1, d);
   const wd = dateObj.getDay();
   detailDateEl.textContent = `${y}/${m}/${d}(${WEEKDAY_JP[wd]})`;
+
+  const prevDateObj = new Date(y, m - 1, d - 1);
+  const prevRec = await getRecord(fmtKey(prevDateObj));
+  previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
 
   const rec = await getRecord(dateKey);
   currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
@@ -420,8 +503,14 @@ function refreshPhotoPreview(slot) {
   const placeholder = slot === "start" ? photoPlaceholderStart : photoPlaceholderEnd;
   const retakeBtn = slot === "start" ? retakePhotoStartBtn : retakePhotoEndBtn;
   const removeBtn = slot === "start" ? removePhotoStartBtn : removePhotoEndBtn;
+  if (img.dataset.objectUrl) {
+    URL.revokeObjectURL(img.dataset.objectUrl);
+    delete img.dataset.objectUrl;
+  }
   if (blob) {
-    img.src = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    img.dataset.objectUrl = url;
+    img.src = url;
     img.hidden = false;
     placeholder.hidden = true;
     retakeBtn.hidden = false;
@@ -441,7 +530,12 @@ function requestPhotoCapture(slot) {
 
 function openLightbox(blob) {
   if (!blob) return;
-  lightboxImg.src = URL.createObjectURL(blob);
+  if (lightboxImg.dataset.objectUrl) {
+    URL.revokeObjectURL(lightboxImg.dataset.objectUrl);
+  }
+  const url = URL.createObjectURL(blob);
+  lightboxImg.dataset.objectUrl = url;
+  lightboxImg.src = url;
   lightbox.hidden = false;
 }
 
@@ -460,6 +554,7 @@ function totalDistance(rec) {
 }
 
 function updateSummary() {
+  updateWarnings();
   const rec = {
     start: startInput.value !== "" ? parseFloat(startInput.value) : null,
     end: endInput.value !== "" ? parseFloat(endInput.value) : null,
@@ -480,6 +575,32 @@ function updateSummary() {
     return;
   }
   distanceSummary.textContent = `走行距離: ${total.toFixed(1)} km`;
+}
+
+function updateWarnings() {
+  const start = startInput.value !== "" ? parseFloat(startInput.value) : null;
+  const end = endInput.value !== "" ? parseFloat(endInput.value) : null;
+  const hasBreak = breakCheckbox.checked;
+  const start2 = start2Input.value !== "" ? parseFloat(start2Input.value) : null;
+  const end2 = end2Input.value !== "" ? parseFloat(end2Input.value) : null;
+
+  const messages = [];
+  if (start != null && end != null && end < start) {
+    messages.push("終針が始針より小さくなっています。");
+  }
+  if (hasBreak && start2 != null && end2 != null && end2 < start2) {
+    messages.push("終了距離2が再開距離より小さくなっています。");
+  }
+  if (start != null && previousDayEnd != null && start < previousDayEnd) {
+    messages.push(`前日の終針（${previousDayEnd}）より小さい値です。`);
+  }
+
+  if (messages.length > 0) {
+    warningBox.textContent = "⚠ " + messages.join(" ");
+    warningBox.hidden = false;
+  } else {
+    warningBox.hidden = true;
+  }
 }
 
 /* ---------- 月次出力 ---------- */
@@ -507,8 +628,12 @@ async function exportCurrentPeriod() {
   const end = periodEndFor(start);
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
 
+  const vehicleInfo = getVehicleInfo();
   const payload = {
     name: getUserName(),
+    vehicleYear: vehicleInfo.vehicleYear,
+    vehicleModel: vehicleInfo.vehicleModel,
+    engineDisplacement: vehicleInfo.engineDisplacement,
     periodStart: fmtKey(start),
     periodEnd: fmtKey(end),
     records: records.map((r) => ({
@@ -565,6 +690,15 @@ async function closeDetail() {
   detailView.hidden = true;
   listView.hidden = false;
   await renderList();
+  await maybeAutoBackup();
+}
+
+async function maybeAutoBackup() {
+  if (!getAutoBackupSetting()) return;
+  const now = Date.now();
+  if (now - getLastAutoBackupAt() < AUTO_BACKUP_INTERVAL_MS) return;
+  setLastAutoBackupAt(now); // キャンセルされても再送を連発しないよう先に記録
+  await exportCurrentPeriod();
 }
 
 /* ---------- イベント ---------- */
@@ -591,12 +725,30 @@ nameBtn.addEventListener("click", () => {
 openSettingsBtn.addEventListener("click", () => {
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
+  const vehicleInfo = getVehicleInfo();
+  vehicleYearInput.value = vehicleInfo.vehicleYear;
+  vehicleModelInput.value = vehicleInfo.vehicleModel;
+  engineDisplacementInput.value = vehicleInfo.engineDisplacement;
+  autoBackupCheckbox.checked = getAutoBackupSetting();
   listView.hidden = true;
   settingsView.hidden = false;
 });
 
 boxEmailInput.addEventListener("blur", () => {
   setBoxEmail(boxEmailInput.value.trim());
+});
+
+vehicleYearInput.addEventListener("blur", () => {
+  setVehicleField("vehicleYear", vehicleYearInput.value.trim());
+});
+vehicleModelInput.addEventListener("blur", () => {
+  setVehicleField("vehicleModel", vehicleModelInput.value.trim());
+});
+engineDisplacementInput.addEventListener("blur", () => {
+  setVehicleField("engineDisplacement", engineDisplacementInput.value.trim());
+});
+autoBackupCheckbox.addEventListener("change", () => {
+  setAutoBackupSetting(autoBackupCheckbox.checked);
 });
 
 themeSelect.addEventListener("change", () => {
@@ -665,8 +817,32 @@ lightboxCloseBtn.addEventListener("click", (ev) => {
 photoInput.addEventListener("change", async () => {
   const file = photoInput.files[0];
   const slot = pendingSlot;
+  const targetDate = currentDetailDate; // 縮小処理中に日付が切り替わっても混線しないよう固定
   pendingSlot = null;
   if (!file || !slot) return;
+
+  let blob;
+  try {
+    blob = await downscaleImage(file);
+  } catch (e) {
+    blob = file;
+  }
+  photoInput.value = "";
+
+  if (currentDetailDate !== targetDate) {
+    // 縮小処理中に別の日付の画面へ移動していた場合、表示中の状態(グローバル変数)を
+    // 汚さないよう、対象の日付のレコードを直接読み書きする
+    const rec = (await getRecord(targetDate)) || { date: targetDate };
+    if (slot === "start") {
+      rec.photoStart = blob;
+    } else {
+      rec.photoEnd = blob;
+    }
+    await putRecord(rec);
+    await renderList();
+    return;
+  }
+
   const saveOriginalBtn = slot === "start" ? saveOriginalStartBtn : saveOriginalEndBtn;
   if (getSaveOriginalSetting()) {
     if (slot === "start") {
@@ -678,12 +854,6 @@ photoInput.addEventListener("change", async () => {
   } else {
     saveOriginalBtn.hidden = true;
   }
-  let blob;
-  try {
-    blob = await downscaleImage(file);
-  } catch (e) {
-    blob = file;
-  }
   if (slot === "start") {
     currentPhotoStart = blob;
   } else {
@@ -691,7 +861,6 @@ photoInput.addEventListener("change", async () => {
   }
   refreshPhotoPreview(slot);
   await saveCurrentDetail();
-  photoInput.value = "";
 });
 
 saveOriginalStartBtn.addEventListener("click", (ev) => {
