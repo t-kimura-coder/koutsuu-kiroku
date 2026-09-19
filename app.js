@@ -1,5 +1,14 @@
 "use strict";
 
+/* ---------- アイコン ---------- */
+
+const CAMERA_ICON_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+  'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' +
+  '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>' +
+  '<circle cx="12" cy="13" r="3.5"/>' +
+  "</svg>";
+
 /* ---------- IndexedDB ---------- */
 
 const DB_NAME = "koutsuu-kiroku";
@@ -301,7 +310,7 @@ async function renderList() {
       img.src = URL.createObjectURL(thumbSource);
       thumb.appendChild(img);
     } else {
-      thumb.textContent = "📷";
+      thumb.innerHTML = CAMERA_ICON_SVG;
     }
 
     const info = document.createElement("div");
