@@ -8,6 +8,38 @@
   --sun: #d64545;
   --sat: #2f6fed;
   --border: #e3e5e9;
+  --muted-bg: #eee;
+  --muted-fg: #bbb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171b;
+    --card: #1f2226;
+    --text: #eaeaea;
+    --sub: #9aa0a6;
+    --accent: #6fa8ff;
+    --danger: #ff6b6b;
+    --sun: #ff6b6b;
+    --sat: #6fa8ff;
+    --border: #33373d;
+    --muted-bg: #2a2d33;
+    --muted-fg: #6b7178;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15171b;
+  --card: #1f2226;
+  --text: #eaeaea;
+  --sub: #9aa0a6;
+  --accent: #6fa8ff;
+  --danger: #ff6b6b;
+  --sun: #ff6b6b;
+  --sat: #6fa8ff;
+  --border: #33373d;
+  --muted-bg: #2a2d33;
+  --muted-fg: #6b7178;
 }
 
 * { box-sizing: border-box; }
@@ -105,14 +137,14 @@ html, body {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  background: #eee;
+  background: var(--muted-bg);
   object-fit: cover;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: #bbb;
+  color: var(--muted-fg);
   overflow: hidden;
 }
 
@@ -296,7 +328,7 @@ html, body {
 .photoBox {
   width: 100%;
   aspect-ratio: 4/3;
-  background: #eee;
+  background: var(--muted-bg);
   border-radius: 12px;
   overflow: hidden;
   display: flex;
@@ -328,11 +360,12 @@ html, body {
   flex: 1;
 }
 
-.field input, .field textarea {
+.field input, .field textarea, .field select {
   font-size: 15px;
   padding: 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
+  background: var(--card);
   color: var(--text);
   font-family: inherit;
   resize: vertical;

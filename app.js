@@ -179,6 +179,37 @@ function tryShareOriginal(file) {
   });
 }
 
+/* ---------- テーマ設定 ---------- */
+
+const THEME_KEY = "koutsuu-kiroku-theme";
+
+function getTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) || "system";
+  } catch (e) {
+    return "system";
+  }
+}
+
+function applyTheme(theme) {
+  if (theme === "light" || theme === "dark") {
+    document.documentElement.setAttribute("data-theme", theme);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+function setTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (e) {
+    /* ignore */
+  }
+  applyTheme(theme);
+}
+
+applyTheme(getTheme());
+
 /* ---------- DOM参照 ---------- */
 
 const listView = document.getElementById("listView");
@@ -193,6 +224,7 @@ const openSettingsBtn = document.getElementById("openSettingsBtn");
 const settingsBackBtn = document.getElementById("settingsBackBtn");
 const nameBtn = document.getElementById("nameBtn");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
+const themeSelect = document.getElementById("themeSelect");
 
 const backBtn = document.getElementById("backBtn");
 const detailDateEl = document.getElementById("detailDate");
@@ -484,8 +516,13 @@ nameBtn.addEventListener("click", () => {
 });
 
 openSettingsBtn.addEventListener("click", () => {
+  themeSelect.value = getTheme();
   listView.hidden = true;
   settingsView.hidden = false;
+});
+
+themeSelect.addEventListener("change", () => {
+  setTheme(themeSelect.value);
 });
 
 settingsBackBtn.addEventListener("click", () => {
