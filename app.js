@@ -332,6 +332,43 @@ function setUserName(name) {
   }
 }
 
+/* ---------- 行き先の履歴（よく使う候補） ---------- */
+
+const DEST_PINNED = ["通勤", "土場"];
+const DEST_HISTORY_KEY = "koutsuu-kiroku-dest-history";
+const DEST_HISTORY_MAX = 8;
+
+function getDestHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(DEST_HISTORY_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function addDestHistory(value) {
+  const v = (value || "").trim();
+  if (!v || DEST_PINNED.includes(v)) return;
+  try {
+    let list = getDestHistory().filter((x) => x !== v);
+    list.unshift(v);
+    if (list.length > DEST_HISTORY_MAX) list = list.slice(0, DEST_HISTORY_MAX);
+    localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(list));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function renderDestHistoryChips() {
+  const chips = [...DEST_PINNED, ...getDestHistory()];
+  destHistoryChips.innerHTML = chips
+    .map(
+      (v, i) =>
+        `<button type="button" class="destChip${i < DEST_PINNED.length ? " pinned" : ""}" data-value="${v.replace(/"/g, "&quot;")}">${v}</button>`
+    )
+    .join("");
+}
+
 /* ---------- 元画像の保存設定 ---------- */
 
 const SAVE_ORIGINAL_KEY = "koutsuu-kiroku-save-original";
@@ -575,6 +612,7 @@ const removePhotoEndBtn = document.getElementById("removePhotoEndBtn");
 const saveOriginalEndBtn = document.getElementById("saveOriginalEndBtn");
 const photoInput = document.getElementById("photoInput");
 const destinationInput = document.getElementById("destinationInput");
+const destHistoryChips = document.getElementById("destHistoryChips");
 const startInput = document.getElementById("startInput");
 const endInput = document.getElementById("endInput");
 const breakCheckbox = document.getElementById("breakCheckbox");
@@ -775,6 +813,7 @@ async function openDetail(dateKey) {
   refreshPhotoPreview("end");
 
   destinationInput.value = (rec && rec.destination) || "";
+  renderDestHistoryChips();
   startInput.value =
     rec && rec.start != null ? rec.start : previousDayEnd != null ? previousDayEnd : "";
   endInput.value = rec && rec.end != null ? rec.end : "";
@@ -1467,7 +1506,20 @@ async function saveDetailAndToast() {
   showSavedToast();
 }
 
-destinationInput.addEventListener("blur", saveDetailAndToast);
+destinationInput.addEventListener("blur", () => {
+  addDestHistory(destinationInput.value);
+  renderDestHistoryChips();
+  saveDetailAndToast();
+});
+
+destHistoryChips.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".destChip");
+  if (!btn) return;
+  destinationInput.value = btn.dataset.value;
+  addDestHistory(destinationInput.value);
+  renderDestHistoryChips();
+  saveDetailAndToast();
+});
 startInput.addEventListener("input", updateSummary);
 endInput.addEventListener("input", updateSummary);
 startInput.addEventListener("blur", saveDetailAndToast);

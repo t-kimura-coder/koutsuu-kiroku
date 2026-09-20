@@ -877,6 +877,28 @@ html, body {
   padding: 0 2px;
 }
 
+.destHistoryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -8px;
+}
+
+.destChip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--accent);
+  background: var(--header-bg);
+  color: var(--accent);
+}
+
+.destChip.pinned {
+  background: var(--accent);
+  color: #fff;
+}
+
 .summary {
   display: flex;
   align-items: center;
