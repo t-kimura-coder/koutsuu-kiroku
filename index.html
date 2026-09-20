@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -158,15 +158,24 @@
     <div class="settingsPanel" data-panel="options" hidden>
       <label class="checkboxField">
         <input type="checkbox" id="saveOriginalCheckbox">
-        <span>撮影時に元画像も写真アプリへ保存する</span>
+        <span class="checkboxLabelText">
+          <span class="checkboxTitle">元画像も保存</span>
+          <span class="checkboxDesc">撮影時に、圧縮前の元画像も端末の写真アプリへ保存します</span>
+        </span>
       </label>
       <label class="checkboxField">
         <input type="checkbox" id="showReminderCheckbox">
-        <span>ホーム画面に提出期限の通知を表示する</span>
+        <span class="checkboxLabelText">
+          <span class="checkboxTitle">提出期限の通知</span>
+          <span class="checkboxDesc">ホーム画面に提出期限までの日数を表示します</span>
+        </span>
       </label>
       <label class="checkboxField">
         <input type="checkbox" id="autoBackupCheckbox">
-        <span>一覧に戻るたびに自動でバックアップ送信する（前回送信から一定時間が経っていた場合のみ）</span>
+        <span class="checkboxLabelText">
+          <span class="checkboxTitle">自動バックアップ</span>
+          <span class="checkboxDesc">一覧画面に戻るたびに、前回送信から一定時間が経っていれば自動で送信します</span>
+        </span>
       </label>
       <div id="autoBackupIntervalRow" class="field" hidden>
         <span>自動バックアップの間隔</span>
@@ -272,18 +281,18 @@
         <input type="checkbox" id="commuteOnlyCheckbox">
         <span>通勤のみ（他の行き先なし）</span>
       </label>
-      <textarea id="destinationInput" rows="2" placeholder="例）自宅～現場名～会社～自宅"></textarea>
+      <textarea id="destinationInput" rows="2" placeholder="例）自宅→現場名→会社→自宅"></textarea>
     </div>
     <div id="destHistoryChips" class="destHistoryChips"></div>
 
     <div class="fieldRow">
       <label class="field">
         <span><span class="fieldIcon" id="startIcon"></span>開始距離（始針）</span>
-        <input type="number" id="startInput" inputmode="decimal" step="0.1" placeholder="例）87604.0">
+        <input type="number" id="startInput" inputmode="decimal" step="0.1" placeholder="例）10000.0">
       </label>
       <label class="field">
         <span><span class="fieldIcon" id="endIcon"></span>終了距離（終針）</span>
-        <input type="number" id="endInput" inputmode="decimal" step="0.1" placeholder="例）87620.0">
+        <input type="number" id="endInput" inputmode="decimal" step="0.1" placeholder="例）10015.0">
       </label>
     </div>
 
@@ -297,11 +306,11 @@
     <div id="breakFieldRow" class="fieldRow" hidden>
       <label class="field">
         <span>再開距離（中抜け後の始針）</span>
-        <input type="number" id="start2Input" inputmode="decimal" step="0.1" placeholder="例）87630.0">
+        <input type="number" id="start2Input" inputmode="decimal" step="0.1" placeholder="例）10020.0">
       </label>
       <label class="field">
         <span>終了距離2（終針）</span>
-        <input type="number" id="end2Input" inputmode="decimal" step="0.1" placeholder="例）87650.0">
+        <input type="number" id="end2Input" inputmode="decimal" step="0.1" placeholder="例）10035.0">
       </label>
     </div>
 
@@ -332,6 +341,6 @@
   </div>
 </div>
 
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

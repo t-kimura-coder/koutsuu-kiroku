@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 
 /* ---------- アイコン ---------- */
 
@@ -413,9 +413,17 @@ function addPinnedDest(value) {
   const v = (value || "").trim();
   if (!v) return;
   const list = getPinnedDest();
-  if (list.includes(v)) return;
-  list.push(v);
-  setPinnedDest(list);
+  if (!list.includes(v)) {
+    list.push(v);
+    setPinnedDest(list);
+  }
+  // 通常の履歴側に同じ値が残っていると、デフォルト候補と重複して表示され続けるため取り除く
+  try {
+    const history = getDestHistory().filter((x) => x !== v);
+    localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(history));
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 function removePinnedDest(value) {
@@ -1357,14 +1365,19 @@ async function importAllDataBackup(file) {
   saveOriginalCheckbox.checked = getSaveOriginalSetting();
 
   if (Array.isArray(payload.destHistory)) {
+    // 文字列以外の要素が混じっていると、後で行き先チップの描画時に例外が出て
+    // 画面が開けなくなるため、復元時に取り除いておく
+    const cleaned = payload.destHistory.filter((x) => typeof x === "string");
     try {
-      localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(payload.destHistory));
+      localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(cleaned));
     } catch (e) {
       /* ignore */
     }
   }
   if (typeof payload.destHistoryMax === "number") setDestHistoryMax(payload.destHistoryMax);
-  if (Array.isArray(payload.pinnedDest)) setPinnedDest(payload.pinnedDest);
+  if (Array.isArray(payload.pinnedDest)) {
+    setPinnedDest(payload.pinnedDest.filter((x) => typeof x === "string"));
+  }
 
   if (payload.sentLog && typeof payload.sentLog === "object") {
     // 既存の送信済み記録を消してしまわないよう、日付ごとに新しい方のタイムスタンプを残す
@@ -1655,6 +1668,13 @@ destHistoryMaxInput.addEventListener("change", () => {
   const v = parseInt(destHistoryMaxInput.value, 10);
   if (Number.isFinite(v) && v > 0) {
     setDestHistoryMax(v);
+    // 件数を減らした場合、既存の履歴もその場で切り詰める
+    const trimmed = getDestHistory().slice(0, v);
+    try {
+      localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(trimmed));
+    } catch (e) {
+      /* ignore */
+    }
     showSavedToast();
   } else {
     destHistoryMaxInput.value = getDestHistoryMax();

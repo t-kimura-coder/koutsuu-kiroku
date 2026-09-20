@@ -349,6 +349,10 @@ html, body {
   color: inherit;
 }
 
+.homeReminder[hidden] {
+  display: none;
+}
+
 .homeReminder.urgent {
   background: var(--warning-bg);
   color: var(--danger);
@@ -802,7 +806,7 @@ html, body {
 .settingsPanel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 .versionLabel {
@@ -943,16 +947,36 @@ html, body {
 
 .checkboxField {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
   font-size: 14px;
   color: var(--text);
-  padding: 4px 2px;
+  padding: 8px 2px;
 }
 
 .checkboxField input {
   width: 18px;
   height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.checkboxLabelText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.checkboxTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.checkboxDesc {
+  font-size: 12px;
+  color: var(--sub);
+  line-height: 1.4;
 }
 
 .checkboxHelp {
