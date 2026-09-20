@@ -30,7 +30,6 @@
     </div>
     <div class="homeHeaderActions">
       <button id="themeToggleBtn" class="navBtn" aria-label="テーマ切替"></button>
-      <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定"></button>
     </div>
   </header>
 
@@ -86,7 +85,7 @@
 
 <div id="listView" class="view" hidden>
   <header class="topbar">
-    <button id="homeFromListBtn" class="navBtn" aria-label="ホーム">🏠</button>
+    <button id="homeFromListBtn" class="navBtn" aria-label="ホーム"></button>
     <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
     <div class="periodLabel" id="periodLabelBtn" role="button">
       <div><span id="periodTitle">-</span> <span class="periodJumpHint">▾</span></div>
@@ -95,6 +94,12 @@
     <button id="openSettingsBtn" class="navBtn" aria-label="設定"></button>
     <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
   </header>
+
+  <div class="listHero">
+    <img src="hero-illustration.png" class="listHeroImg" alt="">
+    <div class="listHeroCaption listHeroCaptionLeft">積み重ねた走行が、<br>会社の力になる。</div>
+    <div class="listHeroCaption listHeroCaptionRight">一つひとつの走行を、<br>未来につなぐ。</div>
+  </div>
 
   <div id="periodJumpPanel" class="periodJumpPanel" hidden>
     <select id="jumpYearSelect"></select>
@@ -184,11 +189,11 @@
 
 <div id="detailView" class="view" hidden>
   <header class="topbar">
-    <button id="backBtn" class="navBtn" aria-label="戻る">◀ 戻る</button>
+    <button id="detailHomeBtn" class="navBtn" aria-label="ホーム"></button>
     <div class="periodLabel">
       <div id="detailDate">-</div>
     </div>
-    <div style="width:2.5em"></div>
+    <button id="detailListBtn" class="ghostBtn detailListBtn">今月</button>
   </header>
 
   <div class="detailBody">

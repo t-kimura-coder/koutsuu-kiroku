@@ -17,13 +17,14 @@ function fillIcon(paths, size = 20) {
 
 const CAMERA_ICON_SVG = strokeIcon(
   '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>' +
-    '<circle cx="12" cy="13" r="3.5"/>'
+    '<circle cx="12" cy="13" r="3.5"/>',
+  22
 );
 
 const GEAR_ICON_SVG = strokeIcon(
   '<circle cx="12" cy="12" r="3"/>' +
     '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
-  18
+  22
 );
 
 const CALENDAR_ICON_SVG = strokeIcon(
@@ -31,20 +32,20 @@ const CALENDAR_ICON_SVG = strokeIcon(
     '<line x1="16" y1="2" x2="16" y2="6"/>' +
     '<line x1="8" y1="2" x2="8" y2="6"/>' +
     '<line x1="3" y1="10" x2="21" y2="10"/>',
-  18
+  22
 );
 
 const ROAD_ICON_SVG = fillIcon(
   '<path fill-rule="evenodd" d="M5 21 19 21 14 3 10 3Z ' +
     'M11.3 6h1.4v3h-1.4Z M11.1 10.3h1.8v3h-1.8Z M10.8 15.3h2.4v3.2h-2.4Z"/>',
-  18
+  22
 );
 
 const CAR_ICON_SVG = fillIcon(
-  '<path fill-rule="evenodd" d="M3 13 4.6 8.5A2 2 0 0 1 6.5 7h11a2 2 0 0 1 1.9 1.5L21 13v5H3Z ' +
-    'M7 18m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0 ' +
-    'M17 18m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0"/>',
-  18
+  '<path fill-rule="evenodd" d="M4 11a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3Z ' +
+    'M6.8 9.4h4v3.2h-4Z M13.2 9.4h4v3.2h-4Z"/>' +
+    '<circle cx="8" cy="16" r="2.1"/><circle cx="16" cy="16" r="2.1"/>',
+  22
 );
 
 const LIST_ICON_SVG = strokeIcon(
@@ -52,32 +53,32 @@ const LIST_ICON_SVG = strokeIcon(
     '<polyline points="14 3 14 8 19 8"/>' +
     '<line x1="8.5" y1="13" x2="15.5" y2="13"/>' +
     '<line x1="8.5" y1="17" x2="15.5" y2="17"/>',
-  18
+  22
 );
 
 const SEND_ICON_SVG = strokeIcon(
   '<line x1="21" y1="3" x2="10.5" y2="13.5"/>' + '<polygon points="21 3 14 21 10.5 13.5 3 10 21 3"/>',
-  18
+  22
 );
 
-const PLAY_ICON_SVG = fillIcon('<polygon points="6,4 20,12 6,20"/>', 20);
+const PLAY_ICON_SVG = fillIcon('<polygon points="6,4 20,12 6,20"/>', 22);
 
 const HOME_ICON_SVG = strokeIcon(
   '<path d="M3 11.5 12 4l9 7.5"/>' +
     '<path d="M5.5 10v9a1 1 0 0 0 1 1H9.5a1 1 0 0 0 1-1v-4h3v4a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1v-9"/>',
-  18
+  22
 );
 
 const OPTIONS_ICON_SVG = strokeIcon(
   '<path d="M4 6h11"/><circle cx="17.5" cy="6" r="2"/>' +
     '<path d="M20 12H9"/><circle cx="6.5" cy="12" r="2"/>' +
     '<path d="M4 18h11"/><circle cx="17.5" cy="18" r="2"/>',
-  18
+  22
 );
 
 const OTHER_ICON_SVG = strokeIcon(
   '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
-  18
+  22
 );
 
 const SUN_ICON_SVG = strokeIcon(
@@ -86,12 +87,12 @@ const SUN_ICON_SVG = strokeIcon(
     '<line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/>' +
     '<line x1="4.6" y1="4.6" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.4" y2="19.4"/>' +
     '<line x1="4.6" y1="19.4" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.4" y2="4.6"/>',
-  18
+  22
 );
 
 const MOON_ICON_SVG = strokeIcon(
   '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
-  18
+  22
 );
 
 function injectIcon(id, svg) {
@@ -100,9 +101,10 @@ function injectIcon(id, svg) {
 }
 
 function injectIcons() {
-  injectIcon("goToSettingsFromHomeBtn", GEAR_ICON_SVG);
   injectIcon("openSettingsBtn", GEAR_ICON_SVG);
   injectIcon("settingsHomeBtn", HOME_ICON_SVG);
+  injectIcon("detailHomeBtn", HOME_ICON_SVG);
+  injectIcon("homeFromListBtn", HOME_ICON_SVG);
   injectIcon("homeStatIconRoad", ROAD_ICON_SVG);
   injectIcon("homeStatIconCal", CALENDAR_ICON_SVG);
   injectIcon("homeStatIconCar", CAR_ICON_SVG);
@@ -448,7 +450,6 @@ applyTheme(getTheme());
 const loadingView = document.getElementById("loadingView");
 const homeView = document.getElementById("homeView");
 const goToListBtn = document.getElementById("goToListBtn");
-const goToSettingsFromHomeBtn = document.getElementById("goToSettingsFromHomeBtn");
 const homeFromListBtn = document.getElementById("homeFromListBtn");
 const homeStatToday = document.getElementById("homeStatToday");
 const homeStatMonth = document.getElementById("homeStatMonth");
@@ -491,7 +492,8 @@ const importAllBtn = document.getElementById("importAllBtn");
 const importAllFileInput = document.getElementById("importAllFileInput");
 const warningBox = document.getElementById("warningBox");
 
-const backBtn = document.getElementById("backBtn");
+const detailHomeBtn = document.getElementById("detailHomeBtn");
+const detailListBtn = document.getElementById("detailListBtn");
 const detailDateEl = document.getElementById("detailDate");
 const photoBoxStart = document.getElementById("photoBoxStart");
 const photoPreviewStart = document.getElementById("photoPreviewStart");
@@ -572,12 +574,7 @@ function daysUntilNextSixteenth(from) {
 
 /* ---------- 一覧描画 ---------- */
 
-let activeThumbUrls = [];
-
 async function renderList() {
-  activeThumbUrls.forEach((url) => URL.revokeObjectURL(url));
-  activeThumbUrls = [];
-
   const start = currentPeriodStart;
   const end = periodEndFor(start);
   periodTitleEl.textContent = fmtPeriodTitle(start, end);
@@ -607,21 +604,13 @@ async function renderList() {
     dateEl.className = "dayDate" + (wd === 0 ? " sun" : wd === 6 ? " sat" : "");
     dateEl.textContent = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY_JP[wd]})`;
 
+    const startPhotoOk = !!(rec && rec.photoStart);
+    const endPhotoOk = !!(rec && rec.photoEnd);
     const thumb = document.createElement("div");
-    thumb.className = "dayThumb";
-    const thumbSource = rec && (rec.photoStart || rec.photoEnd);
-    if (thumbSource) {
-      const img = document.createElement("img");
-      img.style.width = "100%";
-      img.style.height = "100%";
-      img.style.objectFit = "cover";
-      const thumbUrl = URL.createObjectURL(thumbSource);
-      activeThumbUrls.push(thumbUrl);
-      img.src = thumbUrl;
-      thumb.appendChild(img);
-    } else {
-      thumb.innerHTML = CAMERA_ICON_SVG;
-    }
+    thumb.className = "dayPhotoStatus";
+    thumb.innerHTML =
+      `<div class="photoStatusLine${startPhotoOk ? " ok" : ""}">開始 ${startPhotoOk ? "✓" : "－"}</div>` +
+      `<div class="photoStatusLine${endPhotoOk ? " ok" : ""}">終了 ${endPhotoOk ? "✓" : "－"}</div>`;
 
     const info = document.createElement("div");
     info.className = "dayInfo";
@@ -665,18 +654,6 @@ async function renderList() {
         info.appendChild(totalLine);
       }
     }
-
-    const status = document.createElement("div");
-    status.className = "dayStatus";
-    const mk = (label, ok) => {
-      const span = document.createElement("span");
-      span.className = ok ? "ok" : "ng";
-      span.textContent = `${label}${ok ? "✓" : "未"}`;
-      return span;
-    };
-    status.appendChild(mk("開始写真", !!(rec && rec.photoStart)));
-    status.appendChild(mk("終了写真", !!(rec && rec.photoEnd)));
-    info.appendChild(status);
 
     row.appendChild(dateEl);
     row.appendChild(thumb);
@@ -1032,11 +1009,18 @@ async function saveCurrentDetail() {
   });
 }
 
-async function closeDetail() {
+async function closeDetailToList() {
   await saveCurrentDetail();
   detailView.hidden = true;
   listView.hidden = false;
   await renderList();
+  await maybeAutoBackup();
+}
+
+async function closeDetailToHome() {
+  await saveCurrentDetail();
+  detailView.hidden = true;
+  await showSection("home");
   await maybeAutoBackup();
 }
 
@@ -1159,7 +1143,6 @@ bottomTabBtns.forEach((btn) => {
 });
 
 openSettingsBtn.addEventListener("click", () => showSection("vehicle"));
-goToSettingsFromHomeBtn.addEventListener("click", () => showSection("vehicle"));
 homeVehicleBtn.addEventListener("click", () => showSection("vehicle"));
 settingsHomeBtn.addEventListener("click", () => showSection("home"));
 
@@ -1263,7 +1246,8 @@ saveOriginalCheckbox.addEventListener("change", () => {
   setSaveOriginalSetting(saveOriginalCheckbox.checked);
 });
 
-backBtn.addEventListener("click", closeDetail);
+detailHomeBtn.addEventListener("click", closeDetailToHome);
+detailListBtn.addEventListener("click", closeDetailToList);
 
 photoBoxStart.addEventListener("click", () => {
   if (currentPhotoStart) openLightbox(currentPhotoStart);
