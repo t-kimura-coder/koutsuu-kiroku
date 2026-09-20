@@ -336,7 +336,14 @@ html, body {
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 600;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.homeReminder .fieldIcon {
+  color: inherit;
 }
 
 .homeReminder.urgent {
@@ -654,6 +661,13 @@ html, body {
   font-size: 14px;
 }
 
+.inlineIcon {
+  display: inline-flex;
+  vertical-align: -4px;
+  margin-right: 5px;
+  color: inherit;
+}
+
 .photoSlotActions {
   display: flex;
   gap: 6px;
@@ -754,6 +768,10 @@ html, body {
   color: var(--text);
   font-size: 15px;
   font-weight: 600;
+}
+
+.photoChoiceBtn .inlineIcon {
+  vertical-align: -5px;
 }
 
 .photoChoiceCancel {

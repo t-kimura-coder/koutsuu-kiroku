@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -72,7 +72,9 @@
       </button>
     </div>
 
-    <div id="homeReminder" class="homeReminder"></div>
+    <div id="homeReminder" class="homeReminder">
+      <span class="fieldIcon" id="homeReminderIcon"></span><span id="homeReminderText"></span>
+    </div>
   </div>
 
   <nav class="bottomTabs">
@@ -112,10 +114,10 @@
   <div id="dayList" class="dayList"></div>
 
   <footer class="bottombar">
-    <button id="exportBtn" class="ghostBtn">📤 今月分をメールで送信</button>
+    <button id="exportBtn" class="ghostBtn"><span class="inlineIcon" id="exportIcon"></span>今月分をメールで送信</button>
     <div class="exportHintRow">
       <span id="exportHintText" class="exportHint">送信先: 未設定（設定画面で入力してください）</span>
-      <button id="copyEmailBtn" class="copyEmailBtn">📋 コピー</button>
+      <button id="copyEmailBtn" class="copyEmailBtn"><span class="inlineIcon" id="copyIcon"></span>コピー</button>
     </div>
   </footer>
 </div>
@@ -180,8 +182,8 @@
 
       <div class="field">
         <span>全データのバックアップ（機種変更・不具合対策用）</span>
-        <button id="exportAllBtn" class="ghostBtn">📦 全データをバックアップ</button>
-        <button id="importAllBtn" class="ghostBtn">📥 バックアップから復元</button>
+        <button id="exportAllBtn" class="ghostBtn"><span class="inlineIcon" id="backupExportIcon"></span>全データをバックアップ</button>
+        <button id="importAllBtn" class="ghostBtn"><span class="inlineIcon" id="backupImportIcon"></span>バックアップから復元</button>
         <input type="file" id="importAllFileInput" accept="application/json" hidden>
       </div>
     </div>
@@ -216,7 +218,7 @@
           <button id="retakePhotoStartBtn" class="photoSlotAction" hidden>撮り直す</button>
           <button id="removePhotoStartBtn" class="photoSlotAction dangerText" hidden>削除</button>
         </div>
-        <button id="saveOriginalStartBtn" class="ghostBtn saveOriginalBtn" hidden>📤 元画像を保存</button>
+        <button id="saveOriginalStartBtn" class="ghostBtn saveOriginalBtn" hidden><span class="inlineIcon" id="saveOriginalIconStart"></span>元画像を保存</button>
       </div>
       <div class="photoSlot">
         <div class="photoSlotLabel"><span class="fieldIcon" id="photoIconEnd"></span>終了距離の写真</div>
@@ -228,7 +230,7 @@
           <button id="retakePhotoEndBtn" class="photoSlotAction" hidden>撮り直す</button>
           <button id="removePhotoEndBtn" class="photoSlotAction dangerText" hidden>削除</button>
         </div>
-        <button id="saveOriginalEndBtn" class="ghostBtn saveOriginalBtn" hidden>📤 元画像を保存</button>
+        <button id="saveOriginalEndBtn" class="ghostBtn saveOriginalBtn" hidden><span class="inlineIcon" id="saveOriginalIconEnd"></span>元画像を保存</button>
       </div>
     </div>
     <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
@@ -294,12 +296,12 @@
 <div id="photoChoiceSheet" class="photoChoiceSheet" hidden>
   <div class="photoChoiceBackdrop"></div>
   <div class="photoChoicePanel">
-    <button id="photoChoiceCameraBtn" class="photoChoiceBtn">📷 撮影する</button>
-    <button id="photoChoiceLibraryBtn" class="photoChoiceBtn">🖼 過去の写真から選ぶ</button>
+    <button id="photoChoiceCameraBtn" class="photoChoiceBtn"><span class="inlineIcon" id="photoChoiceCameraIcon"></span>撮影する</button>
+    <button id="photoChoiceLibraryBtn" class="photoChoiceBtn"><span class="inlineIcon" id="photoChoiceLibraryIcon"></span>過去の写真から選ぶ</button>
     <button id="photoChoiceCancelBtn" class="photoChoiceBtn photoChoiceCancel">キャンセル</button>
   </div>
 </div>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

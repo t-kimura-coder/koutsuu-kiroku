@@ -101,6 +101,34 @@ const PAUSE_ICON_SVG = fillIcon(
 
 const BACK_ICON_SVG = strokeIcon('<polyline points="15 6 9 12 15 18"/>', 19);
 
+const COPY_ICON_SVG = strokeIcon(
+  '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  15
+);
+
+const BELL_ICON_SVG = strokeIcon(
+  '<path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 12 6 8Z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  16
+);
+
+const BACKUP_EXPORT_ICON_SVG = strokeIcon(
+  '<path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M12 3v11"/><polyline points="7 10 12 15 17 10"/>',
+  17
+);
+
+const BACKUP_IMPORT_ICON_SVG = strokeIcon(
+  '<path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M12 14V3"/><polyline points="7 8 12 3 17 8"/>',
+  17
+);
+
+const GALLERY_ICON_SVG = strokeIcon(
+  '<rect x="7" y="7" width="14" height="14" rx="2"/>' +
+    '<path d="M7 11H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3"/>' +
+    '<circle cx="15" cy="11.5" r="1.3" fill="currentColor" stroke="none"/>' +
+    '<path d="M10 21l3.5-3.5 2 2L20 15"/>',
+  18
+);
+
 function injectIcon(id, svg) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = svg;
@@ -142,6 +170,15 @@ function injectIcons() {
   injectIcon("tabIconVehicle1", carIconHtml(19));
   injectIcon("tabIconOptions1", OPTIONS_ICON_SVG);
   injectIcon("tabIconOther1", OTHER_ICON_SVG);
+  injectIcon("exportIcon", SEND_ICON_SVG);
+  injectIcon("copyIcon", COPY_ICON_SVG);
+  injectIcon("backupExportIcon", BACKUP_EXPORT_ICON_SVG);
+  injectIcon("backupImportIcon", BACKUP_IMPORT_ICON_SVG);
+  injectIcon("saveOriginalIconStart", SEND_ICON_SVG);
+  injectIcon("saveOriginalIconEnd", SEND_ICON_SVG);
+  injectIcon("photoChoiceCameraIcon", CAMERA_ICON_SVG);
+  injectIcon("photoChoiceLibraryIcon", GALLERY_ICON_SVG);
+  injectIcon("homeReminderIcon", BELL_ICON_SVG);
   updateThemeToggleIcon();
 }
 
@@ -577,6 +614,7 @@ const homeVehicleSummary = document.getElementById("homeVehicleSummary");
 const startTodayBtn = document.getElementById("startTodayBtn");
 const homeExportBtn = document.getElementById("homeExportBtn");
 const homeReminder = document.getElementById("homeReminder");
+const homeReminderText = document.getElementById("homeReminderText");
 const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
@@ -685,11 +723,11 @@ async function renderHome() {
   const daysLeft = daysUntilNextSixteenth(today);
   const urgent = daysLeft <= 3;
   if (daysLeft === 0) {
-    homeReminder.textContent = "📋 本日が今月分の提出期限です。今すぐ送信しましょう";
+    homeReminderText.textContent = "本日が今月分の提出期限です。今すぐ送信しましょう";
   } else if (urgent) {
-    homeReminder.textContent = `📋 提出期限（毎月16日）まであと ${daysLeft} 日。お早めに送信を`;
+    homeReminderText.textContent = `提出期限（毎月16日）まであと ${daysLeft} 日。お早めに送信を`;
   } else {
-    homeReminder.textContent = `📋 提出期限（毎月16日）まであと ${daysLeft} 日`;
+    homeReminderText.textContent = `提出期限（毎月16日）まであと ${daysLeft} 日`;
   }
   homeReminder.classList.toggle("urgent", urgent);
 }
@@ -1466,7 +1504,8 @@ copyEmailBtn.addEventListener("click", async () => {
     copyEmailBtn.textContent = "コピー失敗";
   }
   setTimeout(() => {
-    copyEmailBtn.textContent = "📋 コピー";
+    copyEmailBtn.innerHTML = '<span class="inlineIcon" id="copyIcon"></span>コピー';
+    injectIcon("copyIcon", COPY_ICON_SVG);
   }, 1500);
 });
 
