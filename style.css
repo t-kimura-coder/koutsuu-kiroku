@@ -12,6 +12,7 @@
   --muted-bg: #eee;
   --muted-fg: #bbb;
   --warning-bg: #fdeaea;
+  --info-bg: #e8f0fd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,6 +30,7 @@
     --muted-bg: #2a2d33;
     --muted-fg: #6b7178;
     --warning-bg: #3a2020;
+    --info-bg: #1c2836;
   }
 }
 
@@ -46,6 +48,7 @@
   --muted-bg: #2a2d33;
   --muted-fg: #6b7178;
   --warning-bg: #3a2020;
+  --info-bg: #1c2836;
 }
 
 * { box-sizing: border-box; }
@@ -374,6 +377,7 @@ html, body {
 
 .bottomTabBtn.active {
   color: var(--accent);
+  font-weight: 700;
 }
 
 .bottomTabIcon {
@@ -381,6 +385,12 @@ html, body {
   align-items: center;
   justify-content: center;
   height: 19px;
+  width: 46px;
+  border-radius: 14px;
+}
+
+.bottomTabBtn.active .bottomTabIcon {
+  background: var(--header-bg);
 }
 
 .topbar {
@@ -493,9 +503,9 @@ html, body {
   font-size: 13px;
 }
 
-#periodTitle, #detailDate {
-  font-size: 16px;
-  font-weight: 600;
+.screenTitle {
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .periodJumpHint {
@@ -531,6 +541,9 @@ html, body {
   flex-shrink: 0;
   font-weight: 700;
   color: var(--accent);
+  text-align: center;
+  padding: 4px 0;
+  border-radius: 8px;
 }
 
 .dayDateNum {
@@ -543,8 +556,8 @@ html, body {
   font-weight: 600;
 }
 
-.dayDate.sun { color: #b5534a; }
-.dayDate.sat { color: #4a72b5; }
+.dayDate.sun { color: var(--sun); background: var(--warning-bg); }
+.dayDate.sat { color: var(--sat); background: var(--info-bg); }
 
 .dayPhotoStatus {
   flex-shrink: 0;
