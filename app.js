@@ -775,7 +775,8 @@ async function openDetail(dateKey) {
   refreshPhotoPreview("end");
 
   destinationInput.value = (rec && rec.destination) || "";
-  startInput.value = rec && rec.start != null ? rec.start : "";
+  startInput.value =
+    rec && rec.start != null ? rec.start : previousDayEnd != null ? previousDayEnd : "";
   endInput.value = rec && rec.end != null ? rec.end : "";
   breakCheckbox.checked = !!(rec && rec.hasBreak);
   breakFieldRow.hidden = !breakCheckbox.checked;
