@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 
 /* ---------- アイコン ---------- */
 
@@ -290,12 +290,18 @@ function shiftPeriod(periodStart, deltaMonths) {
   return new Date(periodStart.getFullYear(), periodStart.getMonth() + deltaMonths, CUTOFF_DAY);
 }
 
+const QUICK_SEND_GRACE_DAYS = 4; // 16日〜19日は「前の期間をまだ送っていないかもしれない」猶予期間とみなす
+
 function periodForQuickSend(today) {
-  // 提出期限当日(切り替わり直後)は、まだ送っていないはずの「前の期間」を対象にする
-  if (today.getDate() === CUTOFF_DAY) {
-    return shiftPeriod(periodStartFor(today), -1);
+  const currentPeriod = periodStartFor(today);
+  const prevPeriod = shiftPeriod(currentPeriod, -1);
+  const dayOfMonth = today.getDate();
+  const inGraceWindow = dayOfMonth >= CUTOFF_DAY && dayOfMonth < CUTOFF_DAY + QUICK_SEND_GRACE_DAYS;
+  // 猶予期間中でも、前の期間をすでに送信済みなら普通に今の期間を対象にする
+  if (inGraceWindow && !getSentAt(fmtKey(prevPeriod))) {
+    return prevPeriod;
   }
-  return periodStartFor(today);
+  return currentPeriod;
 }
 
 function periodStartForEndMonth(year, endMonthHuman) {
@@ -883,6 +889,7 @@ async function openDetail(dateKey) {
 
   destinationInput.value = (rec && rec.destination) || "";
   commuteOnlyCheckbox.checked = destinationInput.value === COMMUTE_LABEL;
+  preCommuteDestination = ""; // 前に開いていた日の行き先が別の日に紛れ込まないようにする
   applyCommuteOnlyState();
   renderDestHistoryChips();
   startInput.value =
@@ -1048,7 +1055,10 @@ async function exportCurrentPeriod(options = {}) {
 
   const name = getUserName();
   if (!name) {
-    alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
+    // 自動バックアップは無言で諦める(ユーザー操作なしに割り込みアラートを出さないため)
+    if (markSent) {
+      alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
+    }
     return;
   }
 
@@ -1078,8 +1088,8 @@ async function exportCurrentPeriod(options = {}) {
     for (const r of payload.records) {
       if (r.start != null && r.end != null) {
         filledDays++;
-        totalKm += totalDistance(r) || 0;
       }
+      totalKm += totalDistance(r) || 0;
       if (r.hasBreak) breakDays++;
     }
     const totalDays = payload.records.length;
@@ -1251,7 +1261,8 @@ async function importAllDataBackup(file) {
   alert(`${restoredCount}件のデータを復元しました。`);
 }
 
-async function saveCurrentDetail() {
+async function saveCurrentDetail(options = {}) {
+  const { skipBreakSelfHeal = false } = options;
   if (!currentDetailDate || detailLoading) return;
   if (!detailDirty) return; // 何も操作していない日は、前日分の引き継ぎ表示だけでレコードを作らない
   const s = startInput.value !== "" ? parseFloat(startInput.value) : null;
@@ -1259,8 +1270,9 @@ async function saveCurrentDetail() {
   let hasBreak = breakCheckbox.checked;
   const s2 = hasBreak && start2Input.value !== "" ? parseFloat(start2Input.value) : null;
   const e2 = hasBreak && end2Input.value !== "" ? parseFloat(end2Input.value) : null;
-  if (s == null && e == null && s2 == null && e2 == null) {
+  if (!skipBreakSelfHeal && s == null && e == null && s2 == null && e2 == null) {
     // 開始/終了/中抜けの数値が全て空なら、中抜けフラグだけが残らないようにする
+    // (チェックを入れた直後でまだ何も入力していないだけの場合はskipBreakSelfHealで除外する)
     hasBreak = false;
     if (breakCheckbox.checked) breakCheckbox.checked = false;
   }
@@ -1734,7 +1746,9 @@ breakCheckbox.addEventListener("change", async () => {
     end2Input.value = "";
   }
   updateSummary();
-  await saveCurrentDetail();
+  // チェックを入れた直後はまだ再開/終了距離2が未入力で当然なので、
+  // 「全項目空なら中抜けフラグを消す」自己修復の対象から外す
+  await saveCurrentDetail({ skipBreakSelfHeal: breakCheckbox.checked });
 });
 start2Input.addEventListener("input", () => {
   detailDirty = true;
@@ -1767,7 +1781,14 @@ window.addEventListener("pagehide", () => {
     await dbPromise;
     await renderHome();
   } catch (e) {
-    loadingView.hidden = true;
+    // 白画面のまま固まらないよう、読み込み画面にエラー文言を残して表示し続ける
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const loadingText = document.getElementById("loadingText");
+    if (loadingSpinner) loadingSpinner.hidden = true;
+    if (loadingText) {
+      loadingText.textContent =
+        "データの読み込みに失敗しました。プライベートブラウズモードや、端末のストレージ空き容量不足が原因の可能性があります。ブラウザの設定を確認し、アプリを再度開いてください。";
+    }
     alert(
       "データの読み込みに失敗しました。プライベートブラウズモードや、端末のストレージ空き容量不足が原因の可能性があります。ブラウザの設定を確認し、アプリを再度開いてください。"
     );
