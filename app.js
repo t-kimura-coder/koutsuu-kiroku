@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 22;
+const APP_VERSION = 23;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -1245,7 +1245,10 @@ async function exportCurrentPeriod(options = {}) {
       totalKm += totalDistance(r) || 0;
       if (r.hasBreak) breakDays++;
     }
-    const totalDays = payload.records.length;
+    // payload.records はIndexedDBに一度でも保存された日だけ(=中身が空でも一度触ればずっと残る)なので、
+    // 期間の実際の日数はカレンダー計算で出す(renderListの日付ループと同じ考え方)
+    let totalDays = 0;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) totalDays++;
     const summary =
       `以下の内容で送信します。\n\n` +
       `氏名: ${payload.name}\n` +
