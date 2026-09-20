@@ -937,6 +937,10 @@ html, body {
   display: none;
 }
 
+.field[hidden] {
+  display: none;
+}
+
 .checkboxField {
   display: flex;
   align-items: center;
@@ -988,6 +992,51 @@ html, body {
 .destChip.pinned {
   background: var(--accent);
   color: #fff;
+}
+
+.pinnedDestList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pinnedDestItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 14px;
+  padding: 5px 6px 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pinnedDestRemove {
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  opacity: 0.85;
+}
+
+.pinnedDestAddRow {
+  display: flex;
+  gap: 8px;
+}
+
+.pinnedDestAddRow input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.pinnedDestAddBtn {
+  width: auto;
+  flex-shrink: 0;
+  padding: 10px 14px;
 }
 
 .summary {

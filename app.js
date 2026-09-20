@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 
 /* ---------- アイコン ---------- */
 
@@ -383,10 +383,61 @@ function setUserName(name) {
 
 /* ---------- 行き先の履歴（よく使う候補） ---------- */
 
-const DEST_PINNED = ["土場"];
 const COMMUTE_LABEL = "通勤";
 const DEST_HISTORY_KEY = "koutsuu-kiroku-dest-history";
-const DEST_HISTORY_MAX = 8;
+const DEST_HISTORY_MAX_KEY = "koutsuu-kiroku-dest-history-max";
+const DEST_HISTORY_MAX_DEFAULT = 8;
+const DEST_PINNED_KEY = "koutsuu-kiroku-dest-pinned";
+const DEST_PINNED_DEFAULT = ["土場"];
+
+function getPinnedDest() {
+  try {
+    const raw = localStorage.getItem(DEST_PINNED_KEY);
+    if (raw == null) return [...DEST_PINNED_DEFAULT]; // 未設定なら今までのデフォルトを引き継ぐ
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [...DEST_PINNED_DEFAULT];
+  } catch (e) {
+    return [...DEST_PINNED_DEFAULT];
+  }
+}
+
+function setPinnedDest(list) {
+  try {
+    localStorage.setItem(DEST_PINNED_KEY, JSON.stringify(list));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function addPinnedDest(value) {
+  const v = (value || "").trim();
+  if (!v) return;
+  const list = getPinnedDest();
+  if (list.includes(v)) return;
+  list.push(v);
+  setPinnedDest(list);
+}
+
+function removePinnedDest(value) {
+  setPinnedDest(getPinnedDest().filter((x) => x !== value));
+}
+
+function getDestHistoryMax() {
+  try {
+    const v = parseInt(localStorage.getItem(DEST_HISTORY_MAX_KEY), 10);
+    return Number.isFinite(v) && v > 0 ? v : DEST_HISTORY_MAX_DEFAULT;
+  } catch (e) {
+    return DEST_HISTORY_MAX_DEFAULT;
+  }
+}
+
+function setDestHistoryMax(value) {
+  try {
+    localStorage.setItem(DEST_HISTORY_MAX_KEY, String(value));
+  } catch (e) {
+    /* ignore */
+  }
+}
 
 function getDestHistory() {
   try {
@@ -398,11 +449,12 @@ function getDestHistory() {
 
 function addDestHistory(value) {
   const v = (value || "").trim();
-  if (!v || DEST_PINNED.includes(v) || v === COMMUTE_LABEL) return;
+  if (!v || getPinnedDest().includes(v) || v === COMMUTE_LABEL) return;
   try {
     let list = getDestHistory().filter((x) => x !== v);
     list.unshift(v);
-    if (list.length > DEST_HISTORY_MAX) list = list.slice(0, DEST_HISTORY_MAX);
+    const max = getDestHistoryMax();
+    if (list.length > max) list = list.slice(0, max);
     localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(list));
   } catch (e) {
     /* ignore */
@@ -424,11 +476,22 @@ function escapeHtml(s) {
 }
 
 function renderDestHistoryChips() {
-  const chips = [...DEST_PINNED, ...getDestHistory()];
+  const pinned = getPinnedDest();
+  const chips = [...pinned, ...getDestHistory()];
   destHistoryChips.innerHTML = chips
     .map((v, i) => {
       const escaped = escapeHtml(v);
-      return `<button type="button" class="destChip${i < DEST_PINNED.length ? " pinned" : ""}" data-value="${escaped}">${escaped}</button>`;
+      return `<button type="button" class="destChip${i < pinned.length ? " pinned" : ""}" data-value="${escaped}">${escaped}</button>`;
+    })
+    .join("");
+}
+
+function renderPinnedDestList() {
+  const list = getPinnedDest();
+  pinnedDestList.innerHTML = list
+    .map((v) => {
+      const escaped = escapeHtml(v);
+      return `<span class="pinnedDestItem">${escaped}<button type="button" class="pinnedDestRemove" data-value="${escaped}" aria-label="削除">✕</button></span>`;
     })
     .join("");
 }
@@ -516,7 +579,8 @@ function populateVehicleYearSelect(currentValue) {
 
 const AUTO_BACKUP_KEY = "koutsuu-kiroku-auto-backup";
 const AUTO_BACKUP_LAST_KEY = "koutsuu-kiroku-auto-backup-last";
-const AUTO_BACKUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6時間
+const AUTO_BACKUP_INTERVAL_HOURS_KEY = "koutsuu-kiroku-auto-backup-interval-hours";
+const AUTO_BACKUP_INTERVAL_HOURS_DEFAULT = 6;
 
 function getAutoBackupSetting() {
   try {
@@ -534,6 +598,23 @@ function setAutoBackupSetting(value) {
   }
 }
 
+function getAutoBackupIntervalHours() {
+  try {
+    const v = parseFloat(localStorage.getItem(AUTO_BACKUP_INTERVAL_HOURS_KEY));
+    return Number.isFinite(v) && v > 0 ? v : AUTO_BACKUP_INTERVAL_HOURS_DEFAULT;
+  } catch (e) {
+    return AUTO_BACKUP_INTERVAL_HOURS_DEFAULT;
+  }
+}
+
+function setAutoBackupIntervalHours(hours) {
+  try {
+    localStorage.setItem(AUTO_BACKUP_INTERVAL_HOURS_KEY, String(hours));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 function getLastAutoBackupAt() {
   try {
     return parseInt(localStorage.getItem(AUTO_BACKUP_LAST_KEY) || "0", 10);
@@ -545,6 +626,27 @@ function getLastAutoBackupAt() {
 function setLastAutoBackupAt(timestamp) {
   try {
     localStorage.setItem(AUTO_BACKUP_LAST_KEY, String(timestamp));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+/* ---------- ホームのリマインダー表示設定 ---------- */
+
+const SHOW_REMINDER_KEY = "koutsuu-kiroku-show-reminder";
+
+function getShowReminderSetting() {
+  try {
+    const v = localStorage.getItem(SHOW_REMINDER_KEY);
+    return v === null ? true : v === "1"; // 未設定時は今までどおり表示する
+  } catch (e) {
+    return true;
+  }
+}
+
+function setShowReminderSetting(value) {
+  try {
+    localStorage.setItem(SHOW_REMINDER_KEY, value ? "1" : "0");
   } catch (e) {
     /* ignore */
   }
@@ -654,6 +756,13 @@ const vehicleYearInput = document.getElementById("vehicleYearInput");
 const vehicleModelInput = document.getElementById("vehicleModelInput");
 const engineDisplacementInput = document.getElementById("engineDisplacementInput");
 const autoBackupCheckbox = document.getElementById("autoBackupCheckbox");
+const autoBackupIntervalRow = document.getElementById("autoBackupIntervalRow");
+const autoBackupIntervalSelect = document.getElementById("autoBackupIntervalSelect");
+const showReminderCheckbox = document.getElementById("showReminderCheckbox");
+const pinnedDestList = document.getElementById("pinnedDestList");
+const pinnedDestInput = document.getElementById("pinnedDestInput");
+const addPinnedDestBtn = document.getElementById("addPinnedDestBtn");
+const destHistoryMaxInput = document.getElementById("destHistoryMaxInput");
 const exportAllBtn = document.getElementById("exportAllBtn");
 const importAllBtn = document.getElementById("importAllBtn");
 const importAllFileInput = document.getElementById("importAllFileInput");
@@ -731,16 +840,21 @@ async function renderHome() {
     ? `${vehicleInfo.vehicleModel}（${vehicleInfo.vehicleYear || "年式未設定"}）`
     : "年式・車種・排気量を設定";
 
-  const daysLeft = daysUntilNextSixteenth(today);
-  const urgent = daysLeft <= 3;
-  if (daysLeft === 0) {
-    homeReminderText.textContent = "本日が今月分の提出期限です。今すぐ送信しましょう";
-  } else if (urgent) {
-    homeReminderText.textContent = `提出期限（毎月16日）まであと ${daysLeft} 日。お早めに送信を`;
+  if (!getShowReminderSetting()) {
+    homeReminder.hidden = true;
   } else {
-    homeReminderText.textContent = `提出期限（毎月16日）まであと ${daysLeft} 日`;
+    homeReminder.hidden = false;
+    const daysLeft = daysUntilNextSixteenth(today);
+    const urgent = daysLeft <= 3;
+    if (daysLeft === 0) {
+      homeReminderText.textContent = "本日が今月分の提出期限です。今すぐ送信しましょう";
+    } else if (urgent) {
+      homeReminderText.textContent = `提出期限（毎月16日）まであと ${daysLeft} 日。お早めに送信を`;
+    } else {
+      homeReminderText.textContent = `提出期限（毎月16日）まであと ${daysLeft} 日`;
+    }
+    homeReminder.classList.toggle("urgent", urgent);
   }
-  homeReminder.classList.toggle("urgent", urgent);
 }
 
 function daysUntilNextSixteenth(from) {
@@ -1167,8 +1281,12 @@ async function exportAllDataBackup() {
     boxEmail: getBoxEmail(),
     theme: getTheme(),
     autoBackup: getAutoBackupSetting(),
+    autoBackupIntervalHours: getAutoBackupIntervalHours(),
+    showReminder: getShowReminderSetting(),
     saveOriginal: getSaveOriginalSetting(),
     destHistory: getDestHistory(),
+    destHistoryMax: getDestHistoryMax(),
+    pinnedDest: getPinnedDest(),
     sentLog: getSentLog(),
     records: serializedRecords,
   };
@@ -1231,6 +1349,10 @@ async function importAllDataBackup(file) {
     updateThemeToggleIcon();
   }
   if (typeof payload.autoBackup === "boolean") setAutoBackupSetting(payload.autoBackup);
+  if (typeof payload.autoBackupIntervalHours === "number") {
+    setAutoBackupIntervalHours(payload.autoBackupIntervalHours);
+  }
+  if (typeof payload.showReminder === "boolean") setShowReminderSetting(payload.showReminder);
   if (typeof payload.saveOriginal === "boolean") setSaveOriginalSetting(payload.saveOriginal);
   saveOriginalCheckbox.checked = getSaveOriginalSetting();
 
@@ -1241,6 +1363,8 @@ async function importAllDataBackup(file) {
       /* ignore */
     }
   }
+  if (typeof payload.destHistoryMax === "number") setDestHistoryMax(payload.destHistoryMax);
+  if (Array.isArray(payload.pinnedDest)) setPinnedDest(payload.pinnedDest);
 
   if (payload.sentLog && typeof payload.sentLog === "object") {
     // 既存の送信済み記録を消してしまわないよう、日付ごとに新しい方のタイムスタンプを残す
@@ -1310,7 +1434,8 @@ async function closeDetailToHome() {
 async function maybeAutoBackup() {
   if (!getAutoBackupSetting()) return;
   const now = Date.now();
-  if (now - getLastAutoBackupAt() < AUTO_BACKUP_INTERVAL_MS) return;
+  const intervalMs = getAutoBackupIntervalHours() * 60 * 60 * 1000;
+  if (now - getLastAutoBackupAt() < intervalMs) return;
   setLastAutoBackupAt(now); // キャンセルされても再送を連発しないよう先に記録
   await exportCurrentPeriod({ skipConfirm: true, periodStart: periodForQuickSend(new Date()), markSent: false });
 }
@@ -1391,6 +1516,11 @@ function loadSettingsFields() {
   vehicleModelInput.value = vehicleInfo.vehicleModel;
   engineDisplacementInput.value = vehicleInfo.engineDisplacement;
   autoBackupCheckbox.checked = getAutoBackupSetting();
+  autoBackupIntervalSelect.value = String(getAutoBackupIntervalHours());
+  autoBackupIntervalRow.hidden = !autoBackupCheckbox.checked;
+  showReminderCheckbox.checked = getShowReminderSetting();
+  renderPinnedDestList();
+  destHistoryMaxInput.value = getDestHistoryMax();
 }
 
 const settingsPanels = document.querySelectorAll(".settingsPanel");
@@ -1483,6 +1613,52 @@ engineDisplacementInput.addEventListener("blur", () => {
 });
 autoBackupCheckbox.addEventListener("change", () => {
   setAutoBackupSetting(autoBackupCheckbox.checked);
+  autoBackupIntervalRow.hidden = !autoBackupCheckbox.checked;
+});
+
+autoBackupIntervalSelect.addEventListener("change", () => {
+  setAutoBackupIntervalHours(parseFloat(autoBackupIntervalSelect.value));
+  showSavedToast();
+});
+
+showReminderCheckbox.addEventListener("change", () => {
+  setShowReminderSetting(showReminderCheckbox.checked);
+});
+
+addPinnedDestBtn.addEventListener("click", () => {
+  const v = pinnedDestInput.value.trim();
+  if (!v) return;
+  addPinnedDest(v);
+  pinnedDestInput.value = "";
+  renderPinnedDestList();
+  renderDestHistoryChips();
+  showSavedToast();
+});
+
+pinnedDestInput.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    addPinnedDestBtn.click();
+  }
+});
+
+pinnedDestList.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".pinnedDestRemove");
+  if (!btn) return;
+  removePinnedDest(btn.dataset.value);
+  renderPinnedDestList();
+  renderDestHistoryChips();
+  showSavedToast();
+});
+
+destHistoryMaxInput.addEventListener("change", () => {
+  const v = parseInt(destHistoryMaxInput.value, 10);
+  if (Number.isFinite(v) && v > 0) {
+    setDestHistoryMax(v);
+    showSavedToast();
+  } else {
+    destHistoryMaxInput.value = getDestHistoryMax();
+  }
 });
 
 exportAllBtn.addEventListener("click", () => {

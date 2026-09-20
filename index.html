@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -161,8 +161,35 @@
         <span>撮影時に元画像も写真アプリへ保存する</span>
       </label>
       <label class="checkboxField">
+        <input type="checkbox" id="showReminderCheckbox">
+        <span>ホーム画面に提出期限の通知を表示する</span>
+      </label>
+      <label class="checkboxField">
         <input type="checkbox" id="autoBackupCheckbox">
         <span>一覧に戻るたびに自動でバックアップ送信する（前回送信から一定時間が経っていた場合のみ）</span>
+      </label>
+      <div id="autoBackupIntervalRow" class="field" hidden>
+        <span>自動バックアップの間隔</span>
+        <select id="autoBackupIntervalSelect">
+          <option value="1">1時間</option>
+          <option value="3">3時間</option>
+          <option value="6">6時間</option>
+          <option value="12">12時間</option>
+          <option value="24">24時間</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span>行き先のデフォルト候補（一覧の履歴からあふれても消えません）</span>
+        <div id="pinnedDestList" class="pinnedDestList"></div>
+        <div class="pinnedDestAddRow">
+          <input type="text" id="pinnedDestInput" placeholder="例）本社">
+          <button id="addPinnedDestBtn" class="ghostBtn pinnedDestAddBtn">追加</button>
+        </div>
+      </div>
+      <label class="field">
+        <span>行き先の履歴保持件数（デフォルト候補を除く）</span>
+        <input type="number" id="destHistoryMaxInput" inputmode="numeric" min="1" step="1">
       </label>
     </div>
 
@@ -305,6 +332,6 @@
   </div>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
