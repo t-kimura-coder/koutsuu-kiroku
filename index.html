@@ -234,15 +234,14 @@
     <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
     <input type="file" id="photoInputLibrary" accept="image/*" hidden>
 
-    <label class="checkboxField">
-      <input type="checkbox" id="commuteOnlyCheckbox">
-      <span>通勤のみ（他の行き先なし）</span>
-    </label>
-
-    <label class="field">
+    <div class="field">
       <span><span class="fieldIcon" id="destIcon"></span>行き先・業務内容</span>
+      <label class="checkboxField">
+        <input type="checkbox" id="commuteOnlyCheckbox">
+        <span>通勤のみ（他の行き先なし）</span>
+      </label>
       <textarea id="destinationInput" rows="2" placeholder="例）自宅～現場名～会社～自宅"></textarea>
-    </label>
+    </div>
     <div id="destHistoryChips" class="destHistoryChips"></div>
 
     <div class="fieldRow">

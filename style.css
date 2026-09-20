@@ -876,7 +876,7 @@ html, body {
   gap: 5px;
 }
 
-.field input, .field textarea, .field select {
+.field input:not([type="checkbox"]), .field textarea, .field select {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
