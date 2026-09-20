@@ -5,6 +5,7 @@
   --sub: #888;
   --accent: #187a4d;
   --header-bg: #eaf6f0;
+  --tab-indicator-bg: #cfeadd;
   --danger: #d64545;
   --sun: #d64545;
   --sat: #2f6fed;
@@ -23,6 +24,7 @@
     --sub: #9aa0a6;
     --accent: #4fcd91;
     --header-bg: #16261f;
+    --tab-indicator-bg: #23402f;
     --danger: #ff6b6b;
     --sun: #ff6b6b;
     --sat: #6fa8ff;
@@ -41,6 +43,7 @@
   --sub: #9aa0a6;
   --accent: #4fcd91;
   --header-bg: #16261f;
+  --tab-indicator-bg: #23402f;
   --danger: #ff6b6b;
   --sun: #ff6b6b;
   --sat: #6fa8ff;
@@ -363,19 +366,19 @@ html, body {
   position: relative;
   display: flex;
   border-top: 1px solid var(--border);
-  background: var(--card);
+  background: var(--header-bg);
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .bottomTabIndicator {
   position: absolute;
-  top: 8px;
+  top: 4px;
   left: 12.5%;
-  width: 46px;
-  height: 19px;
-  margin-left: -23px;
-  border-radius: 14px;
-  background: var(--header-bg);
+  width: 70px;
+  height: 44px;
+  margin-left: -35px;
+  border-radius: 16px;
+  background: var(--tab-indicator-bg);
   transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
   z-index: 0;
@@ -591,6 +594,9 @@ html, body {
 }
 
 .photoStatusLine {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: 11px;
   font-weight: 600;
   color: var(--muted-fg);
@@ -599,6 +605,14 @@ html, body {
 
 .photoStatusLine.ok {
   color: var(--accent);
+}
+
+.photoStatusIcon {
+  display: inline-flex;
+}
+
+.photoStatusIcon svg {
+  display: block;
 }
 
 .dayInfo {
@@ -661,7 +675,7 @@ html, body {
 .bottombar {
   padding: 10px 16px calc(env(safe-area-inset-bottom, 0) + 10px);
   border-top: 1px solid var(--border);
-  background: var(--card);
+  background: var(--header-bg);
 }
 
 .exportHintRow {
@@ -1141,11 +1155,16 @@ html, body {
 .summaryIconBadge {
   flex-shrink: 0;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   background: var(--header-bg);
   color: var(--accent);
+}
+
+.summaryIconBadge svg {
+  width: 26px;
+  height: 26px;
 }
 
 .summaryLabelRow {
@@ -1178,14 +1197,14 @@ html, body {
 }
 
 .summaryBigValue {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
 }
 
 .summaryUnit {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--sub);
 }

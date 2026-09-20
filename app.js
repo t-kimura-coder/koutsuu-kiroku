@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 26;
+const APP_VERSION = 27;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -33,11 +33,11 @@ function fillIcon(paths, size = 20) {
   return `<svg viewBox="0 0 24 24" fill="currentColor" width="${size}" height="${size}">${paths}</svg>`;
 }
 
-const CAMERA_ICON_SVG = strokeIcon(
+const CAMERA_ICON_PATHS =
   '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>' +
-    '<circle cx="12" cy="13" r="3.5"/>',
-  19
-);
+  '<circle cx="12" cy="13" r="3.5"/>';
+const CAMERA_ICON_SVG = strokeIcon(CAMERA_ICON_PATHS, 19);
+const CAMERA_ICON_SVG_SMALL = strokeIcon(CAMERA_ICON_PATHS, 13, 2);
 
 const GEAR_ICON_SVG = strokeIcon(
   '<circle cx="12" cy="12" r="3"/>' +
@@ -972,8 +972,8 @@ async function renderList() {
     const thumb = document.createElement("div");
     thumb.className = "dayPhotoStatus";
     thumb.innerHTML =
-      `<div class="photoStatusLine${startPhotoOk ? " ok" : ""}">開始 ${startPhotoOk ? "✓" : "－"}</div>` +
-      `<div class="photoStatusLine${endPhotoOk ? " ok" : ""}">終了 ${endPhotoOk ? "✓" : "－"}</div>`;
+      `<div class="photoStatusLine${startPhotoOk ? " ok" : ""}"><span class="photoStatusIcon">${CAMERA_ICON_SVG_SMALL}</span>開始</div>` +
+      `<div class="photoStatusLine${endPhotoOk ? " ok" : ""}"><span class="photoStatusIcon">${CAMERA_ICON_SVG_SMALL}</span>終了</div>`;
 
     const info = document.createElement("div");
     info.className = "dayInfo";
