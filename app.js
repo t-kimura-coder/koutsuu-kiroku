@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 
 /* ---------- アイコン ---------- */
 
@@ -174,6 +174,10 @@ function injectIcons() {
   injectIcon("tabIconVehicle1", carIconHtml(19));
   injectIcon("tabIconOptions1", OPTIONS_ICON_SVG);
   injectIcon("tabIconOther1", OTHER_ICON_SVG);
+  injectIcon("tabIconHome2", HOME_ICON_SVG);
+  injectIcon("tabIconVehicle2", carIconHtml(19));
+  injectIcon("tabIconOptions2", OPTIONS_ICON_SVG);
+  injectIcon("tabIconOther2", OTHER_ICON_SVG);
   injectIcon("exportIcon", SEND_ICON_SVG);
   injectIcon("copyIcon", COPY_ICON_SVG);
   injectIcon("backupExportIcon", BACKUP_EXPORT_ICON_SVG);
@@ -1538,10 +1542,19 @@ function loadSettingsFields() {
 
 const settingsPanels = document.querySelectorAll(".settingsPanel");
 const bottomTabBtns = document.querySelectorAll(".bottomTabBtn");
+const bottomTabsNavs = document.querySelectorAll(".bottomTabs");
+const BOTTOM_TAB_ORDER = ["home", "vehicle", "options", "other"];
 
 function setActiveBottomTab(target) {
   bottomTabBtns.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.target === target);
+  });
+  const index = BOTTOM_TAB_ORDER.indexOf(target);
+  if (index === -1) return;
+  const leftPercent = ((index + 0.5) / BOTTOM_TAB_ORDER.length) * 100;
+  bottomTabsNavs.forEach((nav) => {
+    const indicator = nav.querySelector(".bottomTabIndicator");
+    if (indicator) indicator.style.left = `${leftPercent}%`;
   });
 }
 
