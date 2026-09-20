@@ -25,7 +25,10 @@
 <div id="homeView" class="view" hidden>
   <header class="homeHeader">
     <img src="logo-lockup.png" class="homeLogoLockup" alt="走行記録">
-    <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定"></button>
+    <div class="homeHeaderActions">
+      <button id="themeToggleBtn" class="navBtn" aria-label="テーマ切替"></button>
+      <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定"></button>
+    </div>
   </header>
 
   <div class="homeBody">
@@ -110,9 +113,11 @@
 
 <div id="settingsView" class="view" hidden>
   <header class="topbar">
+    <button id="settingsHomeBtn" class="navBtn" aria-label="ホーム"></button>
     <div class="periodLabel">
       <div id="settingsSectionTitle">車両管理</div>
     </div>
+    <div style="width:2.5em"></div>
   </header>
 
   <div class="detailBody">
@@ -167,13 +172,6 @@
       </div>
     </div>
   </div>
-
-  <nav class="bottomTabs">
-    <button class="bottomTabBtn" data-target="home"><span class="bottomTabIcon" id="tabIconHome2"></span>ホーム</button>
-    <button class="bottomTabBtn" data-target="vehicle"><span class="bottomTabIcon" id="tabIconVehicle2"></span>車両管理</button>
-    <button class="bottomTabBtn" data-target="options"><span class="bottomTabIcon" id="tabIconOptions2"></span>オプション</button>
-    <button class="bottomTabBtn" data-target="other"><span class="bottomTabIcon" id="tabIconOther2"></span>その他</button>
-  </nav>
 </div>
 
 <div id="detailView" class="view" hidden>

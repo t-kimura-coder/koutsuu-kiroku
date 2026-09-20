@@ -126,8 +126,14 @@ html, body {
 }
 
 .homeLogoLockup {
-  height: 32px;
+  height: 46px;
   width: auto;
+}
+
+.homeHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .homeBody {
@@ -208,6 +214,7 @@ html, body {
   color: #fff;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
 }
 
@@ -224,9 +231,8 @@ html, body {
 }
 
 .homeMenuText {
-  flex: 1;
   text-align: left;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   display: flex;
   flex-direction: column;

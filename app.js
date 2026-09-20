@@ -83,6 +83,20 @@ const OTHER_ICON_SVG = strokeIcon(
   18
 );
 
+const SUN_ICON_SVG = strokeIcon(
+  '<circle cx="12" cy="12" r="4"/>' +
+    '<line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/>' +
+    '<line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/>' +
+    '<line x1="4.6" y1="4.6" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.4" y2="19.4"/>' +
+    '<line x1="4.6" y1="19.4" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.4" y2="4.6"/>',
+  18
+);
+
+const MOON_ICON_SVG = strokeIcon(
+  '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  18
+);
+
 function injectIcon(id, svg) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = svg;
@@ -91,18 +105,28 @@ function injectIcon(id, svg) {
 function injectIcons() {
   injectIcon("goToSettingsFromHomeBtn", GEAR_ICON_SVG);
   injectIcon("openSettingsBtn", GEAR_ICON_SVG);
+  injectIcon("settingsHomeBtn", HOME_ICON_SVG);
   injectIcon("homeStatIconRoad", ROAD_ICON_SVG);
   injectIcon("homeStatIconCal", CALENDAR_ICON_SVG);
   injectIcon("homeStatIconCar", CAR_ICON_SVG);
   injectIcon("homeMenuPlayIcon", PLAY_ICON_SVG);
   injectIcon("homeListIcon", LIST_ICON_SVG);
   injectIcon("homeSendIcon", SEND_ICON_SVG);
-  ["1", "2"].forEach((suffix) => {
-    injectIcon(`tabIconHome${suffix}`, HOME_ICON_SVG);
-    injectIcon(`tabIconVehicle${suffix}`, CAR_ICON_SVG);
-    injectIcon(`tabIconOptions${suffix}`, OPTIONS_ICON_SVG);
-    injectIcon(`tabIconOther${suffix}`, OTHER_ICON_SVG);
-  });
+  injectIcon("tabIconHome1", HOME_ICON_SVG);
+  injectIcon("tabIconVehicle1", CAR_ICON_SVG);
+  injectIcon("tabIconOptions1", OPTIONS_ICON_SVG);
+  injectIcon("tabIconOther1", OTHER_ICON_SVG);
+  updateThemeToggleIcon();
+}
+
+function getEffectiveTheme() {
+  const t = getTheme();
+  if (t === "light" || t === "dark") return t;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function updateThemeToggleIcon() {
+  injectIcon("themeToggleBtn", getEffectiveTheme() === "dark" ? MOON_ICON_SVG : SUN_ICON_SVG);
 }
 
 /* ---------- IndexedDB ---------- */
@@ -427,6 +451,8 @@ const jumpMonthSelect = document.getElementById("jumpMonthSelect");
 const jumpGoBtn = document.getElementById("jumpGoBtn");
 const jumpTodayBtn = document.getElementById("jumpTodayBtn");
 const openSettingsBtn = document.getElementById("openSettingsBtn");
+const settingsHomeBtn = document.getElementById("settingsHomeBtn");
+const themeToggleBtn = document.getElementById("themeToggleBtn");
 const settingsSectionTitle = document.getElementById("settingsSectionTitle");
 const nameBtn = document.getElementById("nameBtn");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
@@ -1109,6 +1135,14 @@ bottomTabBtns.forEach((btn) => {
 openSettingsBtn.addEventListener("click", () => showSection("vehicle"));
 goToSettingsFromHomeBtn.addEventListener("click", () => showSection("vehicle"));
 homeVehicleBtn.addEventListener("click", () => showSection("vehicle"));
+settingsHomeBtn.addEventListener("click", () => showSection("home"));
+
+themeToggleBtn.addEventListener("click", () => {
+  const next = getEffectiveTheme() === "dark" ? "light" : "dark";
+  setTheme(next);
+  themeSelect.value = next;
+  updateThemeToggleIcon();
+});
 
 goToListBtn.addEventListener("click", async () => {
   homeView.hidden = true;
@@ -1172,6 +1206,7 @@ importAllFileInput.addEventListener("change", async () => {
 
 themeSelect.addEventListener("change", () => {
   setTheme(themeSelect.value);
+  updateThemeToggleIcon();
 });
 
 exportBtn.addEventListener("click", () => exportCurrentPeriod());
