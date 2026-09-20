@@ -257,7 +257,8 @@ html, body {
 }
 
 .homeVehicleCard {
-  border: none;
+  background: var(--header-bg);
+  border: 1px solid var(--accent);
   cursor: pointer;
 }
 
@@ -358,6 +359,9 @@ html, body {
 
 .bottomTabIcon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 19px;
 }
 
 .topbar {
@@ -394,16 +398,17 @@ html, body {
 
 .listHero {
   position: relative;
-  background: var(--header-bg);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 
 .listHeroImg {
   width: 100%;
-  max-width: 480px;
+  height: 160px;
   min-width: 0;
   display: block;
   margin: 0 auto;
+  object-fit: cover;
 }
 
 .periodNavBar {

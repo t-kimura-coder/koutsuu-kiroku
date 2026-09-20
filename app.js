@@ -122,6 +122,7 @@ function injectIcons() {
   injectIcon("openSettingsBtn", GEAR_ICON_SVG);
   injectIcon("settingsHomeBtn", HOME_ICON_SVG);
   injectIcon("detailHomeBtn", HOME_ICON_SVG);
+  injectIcon("detailSettingsBtn", GEAR_ICON_SVG);
   injectIcon("detailListBtn", BACK_ICON_SVG);
   injectIcon("homeFromListBtn", HOME_ICON_SVG);
   injectIcon("photoIconStart", CAMERA_ICON_SVG);
@@ -488,7 +489,6 @@ const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
 const periodTitleEl = document.getElementById("periodTitle");
-const periodNameEl = document.getElementById("periodName");
 const dayListEl = document.getElementById("dayList");
 const prevPeriodBtn = document.getElementById("prevPeriod");
 const nextPeriodBtn = document.getElementById("nextPeriod");
@@ -519,6 +519,7 @@ const importAllFileInput = document.getElementById("importAllFileInput");
 const warningBox = document.getElementById("warningBox");
 
 const detailHomeBtn = document.getElementById("detailHomeBtn");
+const detailSettingsBtn = document.getElementById("detailSettingsBtn");
 const detailListBtn = document.getElementById("detailListBtn");
 const detailDateEl = document.getElementById("detailDate");
 const photoBoxStart = document.getElementById("photoBoxStart");
@@ -604,8 +605,6 @@ async function renderList() {
   const start = currentPeriodStart;
   const end = periodEndFor(start);
   periodTitleEl.textContent = fmtPeriodTitle(start, end);
-  const name = getUserName();
-  periodNameEl.textContent = name ? `${name} さん` : "氏名未設定";
 
   const boxEmail = getBoxEmail();
   exportHintText.textContent = boxEmail ? `送信先: ${boxEmail}` : "送信先: 未設定（設定画面で入力してください）";
@@ -1274,6 +1273,11 @@ saveOriginalCheckbox.addEventListener("change", () => {
 
 detailHomeBtn.addEventListener("click", closeDetailToHome);
 detailListBtn.addEventListener("click", closeDetailToList);
+detailSettingsBtn.addEventListener("click", async () => {
+  await saveCurrentDetail();
+  detailView.hidden = true;
+  await showSection("vehicle");
+});
 
 photoBoxStart.addEventListener("click", () => {
   if (currentPhotoStart) openLightbox(currentPhotoStart);

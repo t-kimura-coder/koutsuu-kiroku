@@ -97,7 +97,6 @@
     <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
     <div class="periodLabel" id="periodLabelBtn" role="button">
       <div><span id="periodTitle">-</span> <span class="periodJumpHint">▾</span></div>
-      <div id="periodName" class="sub">氏名未設定</div>
     </div>
     <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
   </div>
@@ -194,7 +193,10 @@
     <div class="periodLabel">
       <div id="detailDate">-</div>
     </div>
-    <button id="detailHomeBtn" class="navBtn" aria-label="ホーム"></button>
+    <div class="homeHeaderActions">
+      <button id="detailSettingsBtn" class="navBtn" aria-label="設定"></button>
+      <button id="detailHomeBtn" class="navBtn" aria-label="ホーム"></button>
+    </div>
   </header>
 
   <div class="detailBody">
