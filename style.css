@@ -676,10 +676,25 @@ html, body {
 }
 
 .vehiclePanelImg {
-  width: 55%;
-  max-width: 200px;
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
   margin: 0 auto 4px;
   display: block;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.requiredBadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  vertical-align: middle;
 }
 
 .photoRow {

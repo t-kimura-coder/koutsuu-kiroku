@@ -125,20 +125,23 @@
 
   <div class="detailBody">
     <div class="settingsPanel" data-panel="vehicle">
-      <img src="hero-illustration.png" class="vehiclePanelImg" alt="">
-
-      <button id="nameBtn" class="ghostBtn">氏名を設定</button>
+      <img src="vehicle-illustration.png" class="vehiclePanelImg" alt="">
 
       <label class="field">
-        <span>車両情報（年式）</span>
+        <span>氏名<span class="requiredBadge">必須</span></span>
+        <input type="text" id="nameInput" placeholder="例）山田 太郎">
+      </label>
+
+      <label class="field">
+        <span>年式</span>
         <select id="vehicleYearInput"></select>
       </label>
       <label class="field">
-        <span>車両情報（車種）</span>
+        <span>車種</span>
         <input type="text" id="vehicleModelInput" placeholder="例）カローラフィールダー">
       </label>
       <label class="field">
-        <span>車両情報（排気量）</span>
+        <span>排気量</span>
         <input type="text" id="engineDisplacementInput" placeholder="例）1490">
       </label>
     </div>

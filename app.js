@@ -34,22 +34,17 @@ const CALENDAR_ICON_SVG = strokeIcon(
   18
 );
 
-const ROAD_ICON_SVG = strokeIcon(
-  '<path d="M7 21 11 3"/><path d="M17 21 13 3"/>' +
-    '<line x1="12" y1="4" x2="12" y2="7.5"/>' +
-    '<line x1="12" y1="10.5" x2="12" y2="13.5"/>' +
-    '<line x1="12" y1="16.5" x2="12" y2="19.5"/>',
-  18,
-  2.8
+const ROAD_ICON_SVG = fillIcon(
+  '<path fill-rule="evenodd" d="M5 21 19 21 14 3 10 3Z ' +
+    'M11.3 6h1.4v3h-1.4Z M11.1 10.3h1.8v3h-1.8Z M10.8 15.3h2.4v3.2h-2.4Z"/>',
+  18
 );
 
-const CAR_ICON_SVG = strokeIcon(
-  '<path d="M3 13l1.6-4.5A2 2 0 0 1 6.5 7h11a2 2 0 0 1 1.9 1.5L21 13"/>' +
-    '<rect x="2" y="13" width="20" height="5" rx="1.5"/>' +
-    '<circle cx="7" cy="18.5" r="1.6" fill="currentColor" stroke="none"/>' +
-    '<circle cx="17" cy="18.5" r="1.6" fill="currentColor" stroke="none"/>',
-  18,
-  2.6
+const CAR_ICON_SVG = fillIcon(
+  '<path fill-rule="evenodd" d="M3 13 4.6 8.5A2 2 0 0 1 6.5 7h11a2 2 0 0 1 1.9 1.5L21 13v5H3Z ' +
+    'M7 18m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0 ' +
+    'M17 18m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0"/>',
+  18
 );
 
 const LIST_ICON_SVG = strokeIcon(
@@ -480,7 +475,7 @@ const openSettingsBtn = document.getElementById("openSettingsBtn");
 const settingsHomeBtn = document.getElementById("settingsHomeBtn");
 const themeToggleBtn = document.getElementById("themeToggleBtn");
 const settingsSectionTitle = document.getElementById("settingsSectionTitle");
-const nameBtn = document.getElementById("nameBtn");
+const nameInput = document.getElementById("nameInput");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
 const themeSelect = document.getElementById("themeSelect");
 const exportBtn = document.getElementById("exportBtn");
@@ -588,7 +583,6 @@ async function renderList() {
   periodTitleEl.textContent = fmtPeriodTitle(start, end);
   const name = getUserName();
   periodNameEl.textContent = name ? `${name} さん` : "氏名未設定";
-  nameBtn.textContent = name ? "氏名を変更" : "氏名を設定";
 
   const boxEmail = getBoxEmail();
   exportHintText.textContent = boxEmail ? `送信先: ${boxEmail}` : "送信先: 未設定（設定画面で入力してください）";
@@ -1110,13 +1104,9 @@ jumpTodayBtn.addEventListener("click", () => {
   renderList();
 });
 
-nameBtn.addEventListener("click", () => {
-  const current = getUserName();
-  const next = prompt("氏名を入力してください", current);
-  if (next !== null) {
-    setUserName(next.trim());
-    renderList();
-  }
+nameInput.addEventListener("blur", () => {
+  setUserName(nameInput.value.trim());
+  showSavedToast();
 });
 
 const SETTINGS_SECTION_TITLES = {
@@ -1126,6 +1116,7 @@ const SETTINGS_SECTION_TITLES = {
 };
 
 function loadSettingsFields() {
+  nameInput.value = getUserName();
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
   const vehicleInfo = getVehicleInfo();
