@@ -449,6 +449,30 @@ function setLastAutoBackupAt(timestamp) {
   }
 }
 
+const SENT_LOG_KEY = "koutsuu-kiroku-sent-log";
+
+function getSentLog() {
+  try {
+    return JSON.parse(localStorage.getItem(SENT_LOG_KEY) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function getSentAt(periodStartKey) {
+  return getSentLog()[periodStartKey] || null;
+}
+
+function setSentAt(periodStartKey, timestamp) {
+  try {
+    const log = getSentLog();
+    log[periodStartKey] = timestamp;
+    localStorage.setItem(SENT_LOG_KEY, JSON.stringify(log));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 /* ---------- テーマ設定 ---------- */
 
 const THEME_KEY = "koutsuu-kiroku-theme";
@@ -497,6 +521,7 @@ const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
 const periodTitleEl = document.getElementById("periodTitle");
+const sentStatusEl = document.getElementById("sentStatus");
 const dayListEl = document.getElementById("dayList");
 const prevPeriodBtn = document.getElementById("prevPeriod");
 const nextPeriodBtn = document.getElementById("nextPeriod");
@@ -613,10 +638,20 @@ function daysUntilNextSixteenth(from) {
 
 /* ---------- 一覧描画 ---------- */
 
+function fmtSentAt(timestamp) {
+  const d = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 async function renderList() {
   const start = currentPeriodStart;
   const end = periodEndFor(start);
   periodTitleEl.textContent = fmtPeriodTitle(start, end);
+
+  const sentAt = getSentAt(fmtKey(start));
+  sentStatusEl.textContent = sentAt ? `✓ 送信済み（${fmtSentAt(sentAt)}）` : "未送信";
+  sentStatusEl.classList.toggle("sent", !!sentAt);
 
   const boxEmail = getBoxEmail();
   exportHintText.textContent = boxEmail ? `送信先: ${boxEmail}` : "送信先: 未設定（設定画面で入力してください）";
@@ -933,6 +968,8 @@ async function exportCurrentPeriod(options = {}) {
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: fileName });
+      setSentAt(fmtKey(start), Date.now());
+      renderList();
       return;
     } catch (e) {
       /* ユーザーがキャンセルした場合など */

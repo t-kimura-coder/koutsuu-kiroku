@@ -442,6 +442,17 @@ html, body {
   color: var(--accent);
 }
 
+.sentStatus {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.sentStatus.sent {
+  color: var(--accent);
+}
+
 .periodJumpPanel {
   display: flex;
   align-items: center;
