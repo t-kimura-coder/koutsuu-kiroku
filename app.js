@@ -52,6 +52,16 @@ async function getRecordsInRange(startKey, endKey) {
   });
 }
 
+async function getAllRecords() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 async function putRecord(record) {
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
@@ -308,6 +318,9 @@ const vehicleYearInput = document.getElementById("vehicleYearInput");
 const vehicleModelInput = document.getElementById("vehicleModelInput");
 const engineDisplacementInput = document.getElementById("engineDisplacementInput");
 const autoBackupCheckbox = document.getElementById("autoBackupCheckbox");
+const exportAllBtn = document.getElementById("exportAllBtn");
+const importAllBtn = document.getElementById("importAllBtn");
+const importAllFileInput = document.getElementById("importAllFileInput");
 const warningBox = document.getElementById("warningBox");
 
 const backBtn = document.getElementById("backBtn");
@@ -623,14 +636,21 @@ function setBoxEmail(value) {
   }
 }
 
-async function exportCurrentPeriod() {
+async function exportCurrentPeriod(options = {}) {
+  const { skipConfirm = false } = options;
   const start = currentPeriodStart;
   const end = periodEndFor(start);
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
 
+  const name = getUserName();
+  if (!name) {
+    alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
+    return;
+  }
+
   const vehicleInfo = getVehicleInfo();
   const payload = {
-    name: getUserName(),
+    name,
     vehicleYear: vehicleInfo.vehicleYear,
     vehicleModel: vehicleInfo.vehicleModel,
     engineDisplacement: vehicleInfo.engineDisplacement,
@@ -647,9 +667,32 @@ async function exportCurrentPeriod() {
     })),
   };
 
+  if (!skipConfirm) {
+    let filledDays = 0;
+    let breakDays = 0;
+    let totalKm = 0;
+    for (const r of payload.records) {
+      if (r.start != null && r.end != null) {
+        filledDays++;
+        totalKm += totalDistance(r) || 0;
+      }
+      if (r.hasBreak) breakDays++;
+    }
+    const totalDays = payload.records.length;
+    const summary =
+      `以下の内容で送信します。\n\n` +
+      `氏名: ${payload.name}\n` +
+      `期間: ${payload.periodStart} 〜 ${payload.periodEnd}\n` +
+      `入力済み: ${filledDays} / ${totalDays} 日\n` +
+      `中抜けあり: ${breakDays} 日\n` +
+      `合計走行距離: ${totalKm.toFixed(1)} km\n\n` +
+      `送信してよろしいですか？`;
+    if (!confirm(summary)) return;
+  }
+
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: "application/json" });
-  const fileName = `走行距離_${payload.name || "未設定"}_${payload.periodStart}.json`;
+  const fileName = `走行距離_${payload.name}_${payload.periodStart}.json`;
   const file = new File([blob], fileName, { type: "application/json" });
 
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -662,6 +705,91 @@ async function exportCurrentPeriod() {
     }
   }
   alert("この端末では共有機能が使えないため、ファイルを直接送信できません。");
+}
+
+/* ---------- 全データのバックアップ/復元 ---------- */
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function dataUrlToBlob(dataUrl) {
+  const res = await fetch(dataUrl);
+  return res.blob();
+}
+
+async function exportAllDataBackup() {
+  const records = await getAllRecords();
+  const serializedRecords = [];
+  for (const r of records) {
+    serializedRecords.push({
+      ...r,
+      photoStart: r.photoStart ? await blobToDataUrl(r.photoStart) : null,
+      photoEnd: r.photoEnd ? await blobToDataUrl(r.photoEnd) : null,
+    });
+  }
+
+  const vehicleInfo = getVehicleInfo();
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    name: getUserName(),
+    vehicleYear: vehicleInfo.vehicleYear,
+    vehicleModel: vehicleInfo.vehicleModel,
+    engineDisplacement: vehicleInfo.engineDisplacement,
+    records: serializedRecords,
+  };
+
+  const json = JSON.stringify(payload);
+  const blob = new Blob([json], { type: "application/json" });
+  const fileName = `走行距離_全データバックアップ_${new Date().toISOString().slice(0, 10)}.json`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function importAllDataBackup(file) {
+  const text = await file.text();
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch (e) {
+    alert("ファイルの読み込みに失敗しました（JSON形式ではありません）。");
+    return;
+  }
+
+  const records = payload.records || [];
+  if (
+    !confirm(
+      `${records.length}件のデータを復元します。同じ日付のデータは上書きされます。続けますか？`
+    )
+  ) {
+    return;
+  }
+
+  for (const r of records) {
+    const rec = { ...r };
+    if (rec.photoStart) rec.photoStart = await dataUrlToBlob(rec.photoStart);
+    if (rec.photoEnd) rec.photoEnd = await dataUrlToBlob(rec.photoEnd);
+    await putRecord(rec);
+  }
+
+  if (payload.name) setUserName(payload.name);
+  if (payload.vehicleYear) setVehicleField("vehicleYear", payload.vehicleYear);
+  if (payload.vehicleModel) setVehicleField("vehicleModel", payload.vehicleModel);
+  if (payload.engineDisplacement) setVehicleField("engineDisplacement", payload.engineDisplacement);
+
+  alert(`${records.length}件のデータを復元しました。`);
 }
 
 async function saveCurrentDetail() {
@@ -698,7 +826,7 @@ async function maybeAutoBackup() {
   const now = Date.now();
   if (now - getLastAutoBackupAt() < AUTO_BACKUP_INTERVAL_MS) return;
   setLastAutoBackupAt(now); // キャンセルされても再送を連発しないよう先に記録
-  await exportCurrentPeriod();
+  await exportCurrentPeriod({ skipConfirm: true });
 }
 
 /* ---------- イベント ---------- */
@@ -751,11 +879,27 @@ autoBackupCheckbox.addEventListener("change", () => {
   setAutoBackupSetting(autoBackupCheckbox.checked);
 });
 
+exportAllBtn.addEventListener("click", () => {
+  exportAllDataBackup();
+});
+
+importAllBtn.addEventListener("click", () => {
+  importAllFileInput.click();
+});
+
+importAllFileInput.addEventListener("change", async () => {
+  const file = importAllFileInput.files[0];
+  importAllFileInput.value = "";
+  if (!file) return;
+  await importAllDataBackup(file);
+  await renderList();
+});
+
 themeSelect.addEventListener("change", () => {
   setTheme(themeSelect.value);
 });
 
-exportBtn.addEventListener("click", exportCurrentPeriod);
+exportBtn.addEventListener("click", () => exportCurrentPeriod());
 
 copyEmailBtn.addEventListener("click", async () => {
   const email = getBoxEmail();
