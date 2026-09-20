@@ -65,7 +65,8 @@ html, body {
 .view {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
 }
 
 #homeView {
@@ -531,6 +532,7 @@ html, body {
 
 .dayList {
   flex: 1;
+  overflow-y: auto;
   padding: 8px;
   display: flex;
   flex-direction: column;
