@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 24;
+const APP_VERSION = 25;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -207,6 +207,7 @@ function injectIcons() {
   injectIcon("saveOriginalIconEnd", SEND_ICON_SVG);
   injectIcon("photoChoiceCameraIcon", CAMERA_ICON_SVG);
   injectIcon("photoChoiceLibraryIcon", GALLERY_ICON_SVG);
+  injectIcon("photoChoicePrevDayIcon", CLOCK_ICON_SVG);
   injectIcon("homeReminderIcon", BELL_ICON_SVG);
   updateThemeToggleIcon();
 }
@@ -478,6 +479,13 @@ function getDestHistory() {
   } catch (e) {
     return [];
   }
+}
+
+function addDestHistoryFromText(text) {
+  // 「本社 → 現場A → 会社」のように矢印区切りで入力された場合、行き先全体を1件の履歴にせず
+  // 矢印で区切られた地点ごとに履歴へ残す(チップから個別の地点を再利用しやすくするため)
+  const parts = (text || "").split("→").map((s) => s.trim()).filter(Boolean);
+  for (const part of parts) addDestHistory(part);
 }
 
 function addDestHistory(value) {
@@ -823,6 +831,7 @@ const photoInputLibrary = document.getElementById("photoInputLibrary");
 const photoChoiceSheet = document.getElementById("photoChoiceSheet");
 const photoChoiceCameraBtn = document.getElementById("photoChoiceCameraBtn");
 const photoChoiceLibraryBtn = document.getElementById("photoChoiceLibraryBtn");
+const photoChoicePrevDayBtn = document.getElementById("photoChoicePrevDayBtn");
 const photoChoiceCancelBtn = document.getElementById("photoChoiceCancelBtn");
 const photoChoiceBackdrop = document.querySelector(".photoChoiceBackdrop");
 const destinationInput = document.getElementById("destinationInput");
@@ -1008,6 +1017,7 @@ let pendingSlot = null; // "start" | "end"
 let originalPhotoStart = null; // 撮影直後の元画像（保存ボタン用、セッション内のみ）
 let originalPhotoEnd = null;
 let previousDayEnd = null; // 前日の最終メーター値(逆行チェック用)
+let previousDayEndPhoto = null; // 前日の終了写真(開始写真へのコピー用)
 const MAX_PLAUSIBLE_DAILY_KM = 500; // 1日の走行距離としてこれを超える場合は入力ミスを疑う目安
 
 async function openDetail(dateKey) {
@@ -1022,6 +1032,7 @@ async function openDetail(dateKey) {
   const prevDateObj = new Date(y, m - 1, d - 1);
   const prevRec = await getRecord(fmtKey(prevDateObj));
   previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
+  previousDayEndPhoto = prevRec && prevRec.photoEnd ? prevRec.photoEnd : null;
 
   const rec = await getRecord(dateKey);
   currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
@@ -1080,6 +1091,7 @@ function refreshPhotoPreview(slot) {
 
 function requestPhotoCapture(slot) {
   pendingSlot = slot;
+  photoChoicePrevDayBtn.hidden = !(slot === "start" && previousDayEndPhoto);
   photoChoiceSheet.hidden = false;
 }
 
@@ -1826,6 +1838,18 @@ photoChoiceLibraryBtn.addEventListener("click", () => {
   closePhotoChoiceSheet();
   photoInputLibrary.click();
 });
+photoChoicePrevDayBtn.addEventListener("click", async () => {
+  const slot = pendingSlot;
+  pendingSlot = null;
+  closePhotoChoiceSheet();
+  if (slot !== "start" || !previousDayEndPhoto) return;
+  currentPhotoStart = previousDayEndPhoto;
+  originalPhotoStart = null;
+  saveOriginalStartBtn.hidden = true;
+  detailDirty = true;
+  refreshPhotoPreview("start");
+  await saveCurrentDetail();
+});
 photoChoiceCancelBtn.addEventListener("click", () => {
   pendingSlot = null;
   closePhotoChoiceSheet();
@@ -1928,7 +1952,7 @@ destinationInput.addEventListener("input", () => {
 });
 
 destinationInput.addEventListener("blur", () => {
-  addDestHistory(destinationInput.value);
+  addDestHistoryFromText(destinationInput.value);
   renderDestHistoryChips();
   saveDetailAndToast();
 });
