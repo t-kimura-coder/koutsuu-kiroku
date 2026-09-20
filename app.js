@@ -751,6 +751,7 @@ let pendingSlot = null; // "start" | "end"
 let originalPhotoStart = null; // 撮影直後の元画像（保存ボタン用、セッション内のみ）
 let originalPhotoEnd = null;
 let previousDayEnd = null; // 前日の最終メーター値(逆行チェック用)
+const MAX_PLAUSIBLE_DAILY_KM = 500; // 1日の走行距離としてこれを超える場合は入力ミスを疑う目安
 
 async function openDetail(dateKey) {
   currentDetailDate = dateKey;
@@ -884,6 +885,15 @@ function updateWarnings() {
   }
   if (start != null && previousDayEnd != null && start < previousDayEnd) {
     messages.push(`前日の終針（${previousDayEnd}）より小さい値です。`);
+  }
+  if (start != null && end != null && end - start > MAX_PLAUSIBLE_DAILY_KM) {
+    messages.push(`1日の走行距離が${MAX_PLAUSIBLE_DAILY_KM}kmを超えています。入力ミスがないか確認してください。`);
+  }
+  if (start != null && previousDayEnd != null && start - previousDayEnd > MAX_PLAUSIBLE_DAILY_KM) {
+    messages.push(`前日の終針（${previousDayEnd}）から${MAX_PLAUSIBLE_DAILY_KM}km以上離れています。入力ミスがないか確認してください。`);
+  }
+  if (hasBreak && start2 != null && end2 != null && end2 - start2 > MAX_PLAUSIBLE_DAILY_KM) {
+    messages.push(`中抜け後の走行距離が${MAX_PLAUSIBLE_DAILY_KM}kmを超えています。入力ミスがないか確認してください。`);
   }
 
   if (messages.length > 0) {
@@ -1463,6 +1473,12 @@ startInput.addEventListener("blur", saveDetailAndToast);
 endInput.addEventListener("blur", saveDetailAndToast);
 
 breakCheckbox.addEventListener("change", async () => {
+  if (!breakCheckbox.checked && (start2Input.value !== "" || end2Input.value !== "")) {
+    if (!confirm("中抜けの再開距離・終了距離2が入力されています。チェックを外すとこの数値は消えますが、よろしいですか？")) {
+      breakCheckbox.checked = true;
+      return;
+    }
+  }
   breakFieldRow.hidden = !breakCheckbox.checked;
   if (!breakCheckbox.checked) {
     start2Input.value = "";
