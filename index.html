@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -155,6 +155,10 @@
     </div>
 
     <div class="settingsPanel" data-panel="options" hidden>
+      <div class="settingsSectionHeading">
+        <span class="fieldIcon" id="optionsGeneralHeadingIcon"></span>
+        <span>基本設定</span>
+      </div>
       <label class="checkboxField">
         <input type="checkbox" id="saveOriginalCheckbox">
         <span class="checkboxLabelText">
@@ -178,7 +182,7 @@
       </label>
       <div id="autoBackupIntervalRow" class="field" hidden>
         <span>自動バックアップの間隔</span>
-        <select id="autoBackupIntervalSelect">
+        <select id="autoBackupIntervalSelect" class="fieldSelectCompact">
           <option value="1">1時間</option>
           <option value="3">3時間</option>
           <option value="6">6時間</option>
@@ -187,6 +191,10 @@
         </select>
       </div>
 
+      <div class="settingsSectionHeading">
+        <span class="fieldIcon" id="optionsDestHeadingIcon"></span>
+        <span>行き先の設定</span>
+      </div>
       <div class="field">
         <span>行き先のデフォルト候補（一覧の履歴からあふれても消えません）</span>
         <div id="pinnedDestList" class="pinnedDestList"></div>
@@ -371,6 +379,6 @@
   </div>
 </div>
 
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>

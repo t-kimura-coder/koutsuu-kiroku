@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 28;
+const APP_VERSION = 29;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -152,6 +152,11 @@ const GALLERY_ICON_SVG = strokeIcon(
   18
 );
 
+const MAP_PIN_ICON_SVG = strokeIcon(
+  '<path d="M12 21s-7-6.5-7-11.5A7 7 0 0 1 19 9.5C19 14.5 12 21 12 21z"/>' + '<circle cx="12" cy="9.5" r="2.3"/>',
+  18
+);
+
 function injectIcon(id, svg) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = svg;
@@ -207,6 +212,8 @@ function injectIcons() {
   injectIcon("saveOriginalIconEnd", SEND_ICON_SVG);
   injectIcon("photoChoiceCameraIcon", CAMERA_ICON_SVG);
   injectIcon("photoChoiceLibraryIcon", GALLERY_ICON_SVG);
+  injectIcon("optionsGeneralHeadingIcon", OPTIONS_ICON_SVG);
+  injectIcon("optionsDestHeadingIcon", MAP_PIN_ICON_SVG);
   injectIcon("photoChoicePrevDayIcon", CLOCK_ICON_SVG);
   injectIcon("homeReminderIcon", BELL_ICON_SVG);
   updateThemeToggleIcon();

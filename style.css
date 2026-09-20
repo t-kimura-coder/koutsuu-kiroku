@@ -850,6 +850,22 @@ html, body {
   gap: 20px;
 }
 
+.settingsSectionHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settingsSectionHeading .fieldIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .versionLabel {
   text-align: center;
   font-size: 11px;
