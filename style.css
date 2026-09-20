@@ -955,6 +955,12 @@ html, body {
   resize: vertical;
 }
 
+.fieldSelectCompact {
+  align-self: flex-start;
+  width: auto !important;
+  min-width: 6em;
+}
+
 .fieldRow {
   display: flex;
   gap: 10px;

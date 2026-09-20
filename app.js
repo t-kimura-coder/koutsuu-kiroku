@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -919,9 +919,6 @@ async function renderList() {
   sentStatusEl.textContent = sentAt ? `✓ 送信済み（${fmtSentAt(sentAt)}）` : "未送信";
   sentStatusEl.classList.toggle("sent", !!sentAt);
 
-  const boxEmail = getBoxEmail();
-  exportHintText.textContent = boxEmail ? `送信先: ${boxEmail}` : "送信先: 未設定（設定画面で入力してください）";
-
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
   const recordMap = new Map(records.map((r) => [r.date, r]));
 
@@ -1554,10 +1551,16 @@ const SETTINGS_SECTION_TITLES = {
   other: "その他",
 };
 
+function updateEmailHint() {
+  const boxEmail = getBoxEmail();
+  exportHintText.textContent = boxEmail ? `送信先: ${boxEmail}` : "送信先: 未設定";
+}
+
 function loadSettingsFields() {
   nameInput.value = getUserName();
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
+  updateEmailHint();
   const vehicleInfo = getVehicleInfo();
   populateVehicleYearSelect(vehicleInfo.vehicleYear);
   vehicleModelInput.value = vehicleInfo.vehicleModel;
@@ -1567,7 +1570,15 @@ function loadSettingsFields() {
   autoBackupIntervalRow.hidden = !autoBackupCheckbox.checked;
   showReminderCheckbox.checked = getShowReminderSetting();
   renderPinnedDestList();
-  destHistoryMaxInput.value = getDestHistoryMax();
+  const destHistoryMax = getDestHistoryMax();
+  // プリセットにない値が既に保存されていた場合、無言で変更してしまわないよう選択肢を足しておく
+  if (!Array.from(destHistoryMaxInput.options).some((o) => Number(o.value) === destHistoryMax)) {
+    const opt = document.createElement("option");
+    opt.value = String(destHistoryMax);
+    opt.textContent = `${destHistoryMax}件`;
+    destHistoryMaxInput.appendChild(opt);
+  }
+  destHistoryMaxInput.value = String(destHistoryMax);
 }
 
 const settingsPanels = document.querySelectorAll(".settingsPanel");
@@ -1652,6 +1663,7 @@ homeReminder.addEventListener("click", () => {
 
 boxEmailInput.addEventListener("blur", () => {
   setBoxEmail(boxEmailInput.value.trim());
+  updateEmailHint();
   showSavedToast();
 });
 
@@ -1750,7 +1762,7 @@ exportBtn.addEventListener("click", () => exportCurrentPeriod());
 copyEmailBtn.addEventListener("click", async () => {
   const email = getBoxEmail();
   if (!email) {
-    alert("設定画面で送信先メールアドレスを入力してください。");
+    alert("上の欄に送信先メールアドレスを入力してください。");
     return;
   }
   try {

@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -119,10 +119,6 @@
 
   <footer class="bottombar">
     <button id="exportBtn" class="ghostBtn"><span class="inlineIcon" id="exportIcon"></span>今月分をメールで送信</button>
-    <div class="exportHintRow">
-      <span id="exportHintText" class="exportHint">送信先: 未設定（設定画面で入力してください）</span>
-      <button id="copyEmailBtn" class="copyEmailBtn"><span class="inlineIcon" id="copyIcon"></span>コピー</button>
-    </div>
   </footer>
 </div>
 
@@ -201,7 +197,14 @@
       </div>
       <label class="field">
         <span>行き先の履歴保持件数（デフォルト候補を除く）</span>
-        <input type="number" id="destHistoryMaxInput" inputmode="numeric" min="1" step="1">
+        <select id="destHistoryMaxInput" class="fieldSelectCompact">
+          <option value="3">3件</option>
+          <option value="5">5件</option>
+          <option value="8">8件</option>
+          <option value="10">10件</option>
+          <option value="15">15件</option>
+          <option value="20">20件</option>
+        </select>
       </label>
     </div>
 
@@ -209,6 +212,10 @@
       <label class="field">
         <span>月次送信先メールアドレス（Boxのアップロード用）</span>
         <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
+        <div class="exportHintRow">
+          <span id="exportHintText" class="exportHint">送信先: 未設定</span>
+          <button id="copyEmailBtn" type="button" class="copyEmailBtn"><span class="inlineIcon" id="copyIcon"></span>コピー</button>
+        </div>
       </label>
 
       <label class="field">
@@ -363,6 +370,6 @@
   </div>
 </div>
 
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>
