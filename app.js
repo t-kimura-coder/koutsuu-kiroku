@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 29;
+const APP_VERSION = 30;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -1055,10 +1055,12 @@ async function openDetail(dateKey) {
 
   const prevDateObj = new Date(y, m - 1, d - 1);
   const prevRec = await getRecord(fmtKey(prevDateObj));
+  if (currentDetailDate !== dateKey) return; // 待っている間に別の日が開かれた場合、この呼び出しは中断する
   previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
   previousDayEndPhoto = prevRec && prevRec.photoEnd ? prevRec.photoEnd : null;
 
   const rec = await getRecord(dateKey);
+  if (currentDetailDate !== dateKey) return; // 同上
   currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
   currentPhotoEnd = rec && rec.photoEnd ? rec.photoEnd : null;
   originalPhotoStart = null;
@@ -1466,7 +1468,12 @@ async function importAllDataBackup(file) {
 }
 
 async function saveCurrentDetail(options = {}) {
-  const { skipBreakSelfHeal = false } = options;
+  // 中抜けチェックを入れた直後、まだ数値を何も入力していない段階で
+  // 写真保存やアプリのバックグラウンド化など「途中の自動保存」が挟まると、
+  // 中抜けフラグだけを勝手に消してしまわないよう、既定では自己修復を行わない。
+  // 実際に画面を閉じる操作(closeDetailToList/Home、設定へ移動)と、
+  // チェックボックス自身の変更時だけ明示的に有効化する。
+  const { skipBreakSelfHeal = true } = options;
   if (!currentDetailDate || detailLoading) return;
   if (!detailDirty) return; // 何も操作していない日は、前日分の引き継ぎ表示だけでレコードを作らない
   const s = startInput.value !== "" ? parseFloat(startInput.value) : null;
@@ -1476,7 +1483,6 @@ async function saveCurrentDetail(options = {}) {
   const e2 = hasBreak && end2Input.value !== "" ? parseFloat(end2Input.value) : null;
   if (!skipBreakSelfHeal && s == null && e == null && s2 == null && e2 == null) {
     // 開始/終了/中抜けの数値が全て空なら、中抜けフラグだけが残らないようにする
-    // (チェックを入れた直後でまだ何も入力していないだけの場合はskipBreakSelfHealで除外する)
     hasBreak = false;
     if (breakCheckbox.checked) breakCheckbox.checked = false;
   }
@@ -1495,7 +1501,7 @@ async function saveCurrentDetail(options = {}) {
 }
 
 async function closeDetailToList() {
-  await saveCurrentDetail();
+  await saveCurrentDetail({ skipBreakSelfHeal: false });
   currentDetailDate = null;
   detailView.hidden = true;
   listView.hidden = false;
@@ -1504,7 +1510,7 @@ async function closeDetailToList() {
 }
 
 async function closeDetailToHome() {
-  await saveCurrentDetail();
+  await saveCurrentDetail({ skipBreakSelfHeal: false });
   currentDetailDate = null;
   detailView.hidden = true;
   await showSection("home");
@@ -1824,7 +1830,7 @@ saveOriginalCheckbox.addEventListener("change", () => {
 detailHomeBtn.addEventListener("click", closeDetailToHome);
 detailListBtn.addEventListener("click", closeDetailToList);
 detailSettingsBtn.addEventListener("click", async () => {
-  await saveCurrentDetail();
+  await saveCurrentDetail({ skipBreakSelfHeal: false });
   currentDetailDate = null;
   detailView.hidden = true;
   await showSection("vehicle");
