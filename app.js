@@ -28,10 +28,10 @@ const GEAR_ICON_SVG = strokeIcon(
 );
 
 const CALENDAR_ICON_SVG = strokeIcon(
-  '<rect x="3" y="4" width="18" height="18" rx="2"/>' +
-    '<line x1="16" y1="2" x2="16" y2="6"/>' +
-    '<line x1="8" y1="2" x2="8" y2="6"/>' +
-    '<line x1="3" y1="10" x2="21" y2="10"/>',
+  '<rect x="2.5" y="5" width="19" height="16" rx="2"/>' +
+    '<line x1="16" y1="2.5" x2="16" y2="6.5"/>' +
+    '<line x1="8" y1="2.5" x2="8" y2="6.5"/>' +
+    '<line x1="2.5" y1="10" x2="21.5" y2="10"/>',
   19
 );
 
@@ -39,13 +39,6 @@ const ROAD_ICON_SVG = fillIcon(
   '<path fill-rule="evenodd" d="M5 21 19 21 14 3 10 3Z ' +
     'M11.3 6h1.4v3h-1.4Z M11.1 10.3h1.8v3h-1.8Z M10.8 15.3h2.4v3.2h-2.4Z"/>',
   19
-);
-
-const CAR_ICON_SVG = fillIcon(
-  '<path fill-rule="evenodd" d="M4 11a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3Z ' +
-    'M6.8 9.4h4v3.2h-4Z M13.2 9.4h4v3.2h-4Z"/>' +
-    '<circle cx="8" cy="16" r="2.1"/><circle cx="16" cy="16" r="2.1"/>',
-  26
 );
 
 const LIST_ICON_SVG = strokeIcon(
@@ -113,6 +106,18 @@ function injectIcon(id, svg) {
   if (el) el.innerHTML = svg;
 }
 
+const CAR_ICON_ASPECT = 39 / 67;
+
+function carIconHtml(width) {
+  const height = Math.round(width * CAR_ICON_ASPECT);
+  return (
+    `<span class="themedIcon" style="width:${width}px;height:${height}px;">` +
+    `<img class="iconLight" src="car-icon.png" width="${width}" height="${height}" alt="">` +
+    `<img class="iconDark" src="car-icon-dark.png" width="${width}" height="${height}" alt="">` +
+    `</span>`
+  );
+}
+
 function injectIcons() {
   injectIcon("openSettingsBtn", GEAR_ICON_SVG);
   injectIcon("settingsHomeBtn", HOME_ICON_SVG);
@@ -128,12 +133,12 @@ function injectIcons() {
   injectIcon("summaryIcon", ROAD_ICON_SVG);
   injectIcon("homeStatIconRoad", ROAD_ICON_SVG);
   injectIcon("homeStatIconCal", CALENDAR_ICON_SVG);
-  injectIcon("homeStatIconCar", CAR_ICON_SVG);
+  injectIcon("homeStatIconCar", carIconHtml(28));
   injectIcon("homeMenuPlayIcon", PLAY_ICON_SVG);
   injectIcon("homeListIcon", LIST_ICON_SVG);
   injectIcon("homeSendIcon", SEND_ICON_SVG);
   injectIcon("tabIconHome1", HOME_ICON_SVG);
-  injectIcon("tabIconVehicle1", CAR_ICON_SVG);
+  injectIcon("tabIconVehicle1", carIconHtml(19));
   injectIcon("tabIconOptions1", OPTIONS_ICON_SVG);
   injectIcon("tabIconOther1", OTHER_ICON_SVG);
   updateThemeToggleIcon();

@@ -156,6 +156,36 @@ html, body {
   display: block;
 }
 
+.themedIcon {
+  display: inline-block;
+  position: relative;
+}
+
+.themedIcon img {
+  display: block;
+}
+
+.themedIcon .iconDark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .themedIcon .iconLight {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .themedIcon .iconDark {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .themedIcon .iconLight {
+  display: none;
+}
+
+:root[data-theme="dark"] .themedIcon .iconDark {
+  display: block;
+}
+
 .homeHeaderActions {
   display: flex;
   align-items: center;
