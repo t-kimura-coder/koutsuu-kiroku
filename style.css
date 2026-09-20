@@ -125,9 +125,35 @@ html, body {
   border-top: 3px solid var(--accent);
 }
 
+.homeLogoWrap {
+  display: flex;
+  align-items: center;
+}
+
 .homeLogoLockup {
   height: 46px;
   width: auto;
+}
+
+.homeLogoLockup.logoDark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .homeLogoLockup.logoLight {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .homeLogoLockup.logoDark {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .homeLogoLockup.logoLight {
+  display: none;
+}
+
+:root[data-theme="dark"] .homeLogoLockup.logoDark {
+  display: block;
 }
 
 .homeHeaderActions {
@@ -649,6 +675,13 @@ html, body {
   display: none;
 }
 
+.vehiclePanelImg {
+  width: 55%;
+  max-width: 200px;
+  margin: 0 auto 4px;
+  display: block;
+}
+
 .photoRow {
   display: flex;
   gap: 10px;
@@ -762,6 +795,28 @@ html, body {
   font-weight: 600;
   color: var(--sub);
   margin-bottom: 4px;
+}
+
+.saveToast {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0) + 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 150;
+  white-space: nowrap;
+}
+
+.saveToast.show {
+  opacity: 0.92;
 }
 
 .warningBox {

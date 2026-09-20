@@ -24,7 +24,10 @@
 
 <div id="homeView" class="view" hidden>
   <header class="homeHeader">
-    <img src="logo-lockup.png" class="homeLogoLockup" alt="走行記録">
+    <div class="homeLogoWrap">
+      <img src="logo-lockup.png" class="homeLogoLockup logoLight" alt="走行記録">
+      <img src="logo-lockup-dark.png" class="homeLogoLockup logoDark" alt="走行記録">
+    </div>
     <div class="homeHeaderActions">
       <button id="themeToggleBtn" class="navBtn" aria-label="テーマ切替"></button>
       <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定"></button>
@@ -122,11 +125,13 @@
 
   <div class="detailBody">
     <div class="settingsPanel" data-panel="vehicle">
+      <img src="hero-illustration.png" class="vehiclePanelImg" alt="">
+
       <button id="nameBtn" class="ghostBtn">氏名を設定</button>
 
       <label class="field">
         <span>車両情報（年式）</span>
-        <input type="text" id="vehicleYearInput" placeholder="例）令和3">
+        <select id="vehicleYearInput"></select>
       </label>
       <label class="field">
         <span>車両情報（車種）</span>
@@ -248,6 +253,8 @@
     <div id="warningBox" class="warningBox" hidden></div>
   </div>
 </div>
+
+<div id="saveToast" class="saveToast"></div>
 
 <div id="lightbox" class="lightbox" hidden>
   <button id="lightboxCloseBtn" class="lightboxCloseBtn" aria-label="閉じる">✕</button>

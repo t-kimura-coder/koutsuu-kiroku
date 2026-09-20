@@ -2,9 +2,9 @@
 
 /* ---------- アイコン ---------- */
 
-function strokeIcon(paths, size = 20) {
+function strokeIcon(paths, size = 20, width = 2.2) {
   return (
-    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ` +
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${width}" ` +
     `stroke-linecap="round" stroke-linejoin="round" width="${size}" height="${size}">` +
     paths +
     "</svg>"
@@ -36,18 +36,20 @@ const CALENDAR_ICON_SVG = strokeIcon(
 
 const ROAD_ICON_SVG = strokeIcon(
   '<path d="M7 21 11 3"/><path d="M17 21 13 3"/>' +
-    '<line x1="12" y1="4" x2="12" y2="7"/>' +
+    '<line x1="12" y1="4" x2="12" y2="7.5"/>' +
     '<line x1="12" y1="10.5" x2="12" y2="13.5"/>' +
-    '<line x1="12" y1="17" x2="12" y2="20"/>',
-  18
+    '<line x1="12" y1="16.5" x2="12" y2="19.5"/>',
+  18,
+  2.8
 );
 
 const CAR_ICON_SVG = strokeIcon(
   '<path d="M3 13l1.6-4.5A2 2 0 0 1 6.5 7h11a2 2 0 0 1 1.9 1.5L21 13"/>' +
     '<rect x="2" y="13" width="20" height="5" rx="1.5"/>' +
-    '<circle cx="7" cy="18.5" r="1.5"/>' +
-    '<circle cx="17" cy="18.5" r="1.5"/>',
-  18
+    '<circle cx="7" cy="18.5" r="1.6" fill="currentColor" stroke="none"/>' +
+    '<circle cx="17" cy="18.5" r="1.6" fill="currentColor" stroke="none"/>',
+  18,
+  2.6
 );
 
 const LIST_ICON_SVG = strokeIcon(
@@ -353,6 +355,30 @@ function setVehicleField(field, value) {
   }
 }
 
+function buildVehicleYearOptions() {
+  const currentReiwa = new Date().getFullYear() - 2018;
+  const reiwaMax = currentReiwa + 6;
+  const options = [];
+  for (let r = reiwaMax; r >= 1; r--) {
+    options.push(`令和${r}年式`);
+  }
+  for (let h = 31; h >= 1; h--) {
+    options.push(`平成${h}年式`);
+  }
+  return options;
+}
+
+function populateVehicleYearSelect(currentValue) {
+  const options = buildVehicleYearOptions();
+  if (currentValue && !options.includes(currentValue)) {
+    options.unshift(currentValue);
+  }
+  vehicleYearInput.innerHTML =
+    '<option value="">未選択</option>' +
+    options.map((v) => `<option value="${v}">${v}</option>`).join("");
+  vehicleYearInput.value = currentValue || "";
+}
+
 /* ---------- 自動バックアップ設定 ---------- */
 
 const AUTO_BACKUP_KEY = "koutsuu-kiroku-auto-backup";
@@ -496,6 +522,15 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightboxImg");
 const lightboxCloseBtn = document.getElementById("lightboxCloseBtn");
 const distanceSummary = document.getElementById("distanceSummary");
+const saveToast = document.getElementById("saveToast");
+
+let saveToastTimer = null;
+function showSavedToast(message) {
+  saveToast.textContent = message || "保存しました";
+  saveToast.classList.add("show");
+  clearTimeout(saveToastTimer);
+  saveToastTimer = setTimeout(() => saveToast.classList.remove("show"), 1400);
+}
 
 /* ---------- ホーム画面描画 ---------- */
 
@@ -1094,7 +1129,7 @@ function loadSettingsFields() {
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
   const vehicleInfo = getVehicleInfo();
-  vehicleYearInput.value = vehicleInfo.vehicleYear;
+  populateVehicleYearSelect(vehicleInfo.vehicleYear);
   vehicleModelInput.value = vehicleInfo.vehicleModel;
   engineDisplacementInput.value = vehicleInfo.engineDisplacement;
   autoBackupCheckbox.checked = getAutoBackupSetting();
@@ -1173,16 +1208,20 @@ homeReminder.addEventListener("click", () => {
 
 boxEmailInput.addEventListener("blur", () => {
   setBoxEmail(boxEmailInput.value.trim());
+  showSavedToast();
 });
 
-vehicleYearInput.addEventListener("blur", () => {
-  setVehicleField("vehicleYear", vehicleYearInput.value.trim());
+vehicleYearInput.addEventListener("change", () => {
+  setVehicleField("vehicleYear", vehicleYearInput.value);
+  showSavedToast();
 });
 vehicleModelInput.addEventListener("blur", () => {
   setVehicleField("vehicleModel", vehicleModelInput.value.trim());
+  showSavedToast();
 });
 engineDisplacementInput.addEventListener("blur", () => {
   setVehicleField("engineDisplacement", engineDisplacementInput.value.trim());
+  showSavedToast();
 });
 autoBackupCheckbox.addEventListener("change", () => {
   setAutoBackupSetting(autoBackupCheckbox.checked);
@@ -1339,11 +1378,16 @@ removePhotoEndBtn.addEventListener("click", async (ev) => {
   await saveCurrentDetail();
 });
 
-destinationInput.addEventListener("blur", saveCurrentDetail);
+async function saveDetailAndToast() {
+  await saveCurrentDetail();
+  showSavedToast();
+}
+
+destinationInput.addEventListener("blur", saveDetailAndToast);
 startInput.addEventListener("input", updateSummary);
 endInput.addEventListener("input", updateSummary);
-startInput.addEventListener("blur", saveCurrentDetail);
-endInput.addEventListener("blur", saveCurrentDetail);
+startInput.addEventListener("blur", saveDetailAndToast);
+endInput.addEventListener("blur", saveDetailAndToast);
 
 breakCheckbox.addEventListener("change", async () => {
   breakFieldRow.hidden = !breakCheckbox.checked;
@@ -1356,8 +1400,8 @@ breakCheckbox.addEventListener("change", async () => {
 });
 start2Input.addEventListener("input", updateSummary);
 end2Input.addEventListener("input", updateSummary);
-start2Input.addEventListener("blur", saveCurrentDetail);
-end2Input.addEventListener("blur", saveCurrentDetail);
+start2Input.addEventListener("blur", saveDetailAndToast);
+end2Input.addEventListener("blur", saveDetailAndToast);
 
 /* ---------- 初期化 ---------- */
 
