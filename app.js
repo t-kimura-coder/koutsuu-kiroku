@@ -309,6 +309,13 @@ const homeView = document.getElementById("homeView");
 const goToListBtn = document.getElementById("goToListBtn");
 const goToSettingsFromHomeBtn = document.getElementById("goToSettingsFromHomeBtn");
 const homeFromListBtn = document.getElementById("homeFromListBtn");
+const homeStatToday = document.getElementById("homeStatToday");
+const homeStatMonth = document.getElementById("homeStatMonth");
+const homeVehicleBtn = document.getElementById("homeVehicleBtn");
+const homeVehicleSummary = document.getElementById("homeVehicleSummary");
+const startTodayBtn = document.getElementById("startTodayBtn");
+const homeExportBtn = document.getElementById("homeExportBtn");
+const homeReminder = document.getElementById("homeReminder");
 const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
@@ -367,6 +374,47 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightboxImg");
 const lightboxCloseBtn = document.getElementById("lightboxCloseBtn");
 const distanceSummary = document.getElementById("distanceSummary");
+
+/* ---------- ホーム画面描画 ---------- */
+
+async function renderHome() {
+  const today = new Date();
+  const todayKey = fmtKey(today);
+  const todayRec = await getRecord(todayKey);
+  const todayTotal = todayRec ? totalDistance(todayRec) : null;
+  homeStatToday.textContent = todayTotal != null ? `${todayTotal.toFixed(1)} km` : "- km";
+
+  const periodStart = periodStartFor(today);
+  const periodEnd = periodEndFor(periodStart);
+  const records = await getRecordsInRange(fmtKey(periodStart), fmtKey(periodEnd));
+
+  let monthTotal = 0;
+  for (const r of records) {
+    const t = totalDistance(r);
+    if (t != null) monthTotal += t;
+  }
+  homeStatMonth.textContent = `${monthTotal.toFixed(1)} km`;
+
+  const vehicleInfo = getVehicleInfo();
+  homeVehicleSummary.textContent = vehicleInfo.vehicleModel
+    ? `${vehicleInfo.vehicleModel}（${vehicleInfo.vehicleYear || "年式未設定"}）`
+    : "年式・車種・排気量を設定";
+
+  const recordMap = new Map(records.map((r) => [r.date, r]));
+  const lastCheckDate = today < periodEnd ? today : periodEnd;
+  let emptyDays = 0;
+  for (let d = new Date(periodStart); d <= lastCheckDate; d.setDate(d.getDate() + 1)) {
+    const rec = recordMap.get(fmtKey(d));
+    const filled = rec && ((rec.start != null && rec.end != null) || (rec.destination && rec.destination.trim()));
+    if (!filled) emptyDays++;
+  }
+  if (emptyDays > 0) {
+    homeReminder.textContent = `📋 今月まだ記録のない日が ${emptyDays} 日あります`;
+    homeReminder.hidden = false;
+  } else {
+    homeReminder.hidden = true;
+  }
+}
 
 /* ---------- 一覧描画 ---------- */
 
@@ -937,9 +985,30 @@ goToListBtn.addEventListener("click", async () => {
   await renderList();
 });
 
-homeFromListBtn.addEventListener("click", () => {
+homeFromListBtn.addEventListener("click", async () => {
   listView.hidden = true;
   homeView.hidden = false;
+  await renderHome();
+});
+
+startTodayBtn.addEventListener("click", async () => {
+  currentPeriodStart = periodStartFor(new Date());
+  homeView.hidden = true;
+  await openDetail(fmtKey(new Date()));
+});
+
+homeExportBtn.addEventListener("click", async () => {
+  currentPeriodStart = periodStartFor(new Date());
+  await exportCurrentPeriod();
+});
+
+homeVehicleBtn.addEventListener("click", () => {
+  openSettings("home");
+  document.querySelector('.settingsTabBtn[data-tab="profile"]').click();
+});
+
+homeReminder.addEventListener("click", () => {
+  goToListBtn.click();
 });
 
 const settingsTabBtns = document.querySelectorAll(".settingsTabBtn");
@@ -1015,6 +1084,7 @@ settingsBackBtn.addEventListener("click", async () => {
   settingsView.hidden = true;
   if (settingsReturnTo === "home") {
     homeView.hidden = false;
+    await renderHome();
   } else {
     listView.hidden = false;
     await renderList();
@@ -1156,6 +1226,7 @@ end2Input.addEventListener("blur", saveCurrentDetail);
 
 (async () => {
   await dbPromise;
+  await renderHome();
   loadingView.hidden = true;
   homeView.hidden = false;
 })();

@@ -16,16 +16,51 @@
 <body>
 
 <div id="loadingView" class="loadingView">
+  <img src="hero-illustration.png" class="loadingHeroImg" alt="">
+  <div class="loadingTitle">走行距離メモ</div>
   <div class="spinner"></div>
   <div class="loadingText">読み込み中...</div>
 </div>
 
 <div id="homeView" class="view" hidden>
+  <header class="homeHeader">
+    <div class="homeHeaderTitle">
+      <div class="homeTitleText">走行記録</div>
+      <div class="homeTagline">走る、はたらく、つながる。</div>
+    </div>
+    <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定">⚙</button>
+  </header>
+
   <div class="homeBody">
-    <img src="icon-512.png" class="homeLogo" alt="走行距離メモ">
-    <h1 class="homeTitle">走行距離メモ</h1>
-    <button id="goToListBtn" class="homeMenuBtn">🚗 運転記録</button>
-    <button id="goToSettingsFromHomeBtn" class="homeMenuBtn homeMenuBtnSecondary">⚙ 設定</button>
+    <img src="hero-illustration.png" class="homeHeroImg" alt="">
+
+    <div class="homeStats">
+      <div class="homeStatCard">
+        <div class="homeStatLabel">本日の走行距離</div>
+        <div class="homeStatValue" id="homeStatToday">- km</div>
+      </div>
+      <div class="homeStatCard">
+        <div class="homeStatLabel">今月の走行距離</div>
+        <div class="homeStatValue" id="homeStatMonth">- km</div>
+      </div>
+    </div>
+
+    <button id="homeVehicleBtn" class="homeCard">
+      <span class="homeCardTitle">🚐 車両登録</span>
+      <span id="homeVehicleSummary" class="sub">年式・車種・排気量を設定</span>
+    </button>
+
+    <button id="startTodayBtn" class="homeMenuBtn">
+      ▶ 記録開始
+      <span class="homeMenuSub">今日の走行を記録します</span>
+    </button>
+
+    <div class="homeSecondaryRow">
+      <button id="goToListBtn" class="homeSecondaryBtn">📋 今月の記録</button>
+      <button id="homeExportBtn" class="homeSecondaryBtn">📤 今月分を送信</button>
+    </div>
+
+    <div id="homeReminder" class="homeReminder" hidden></div>
   </div>
 </div>
 
