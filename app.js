@@ -1134,9 +1134,14 @@ async function saveCurrentDetail() {
   if (!currentDetailDate) return;
   const s = startInput.value !== "" ? parseFloat(startInput.value) : null;
   const e = endInput.value !== "" ? parseFloat(endInput.value) : null;
-  const hasBreak = breakCheckbox.checked;
+  let hasBreak = breakCheckbox.checked;
   const s2 = hasBreak && start2Input.value !== "" ? parseFloat(start2Input.value) : null;
   const e2 = hasBreak && end2Input.value !== "" ? parseFloat(end2Input.value) : null;
+  if (s == null && e == null && s2 == null && e2 == null) {
+    // 開始/終了/中抜けの数値が全て空なら、中抜けフラグだけが残らないようにする
+    hasBreak = false;
+    if (breakCheckbox.checked) breakCheckbox.checked = false;
+  }
   await putRecord({
     date: currentDetailDate,
     destination: destinationInput.value,
