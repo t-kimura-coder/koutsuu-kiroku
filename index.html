@@ -15,11 +15,26 @@
 </head>
 <body>
 
-<div id="listView" class="view">
+<div id="loadingView" class="loadingView">
+  <div class="spinner"></div>
+  <div class="loadingText">読み込み中...</div>
+</div>
+
+<div id="homeView" class="view" hidden>
+  <div class="homeBody">
+    <img src="icon-512.png" class="homeLogo" alt="走行距離メモ">
+    <h1 class="homeTitle">走行距離メモ</h1>
+    <button id="goToListBtn" class="homeMenuBtn">🚗 運転記録</button>
+    <button id="goToSettingsFromHomeBtn" class="homeMenuBtn homeMenuBtnSecondary">⚙ 設定</button>
+  </div>
+</div>
+
+<div id="listView" class="view" hidden>
   <header class="topbar">
+    <button id="homeFromListBtn" class="navBtn" aria-label="ホーム">🏠</button>
     <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
     <div class="periodLabel" id="periodLabelBtn" role="button">
-      <div id="periodTitle">-</div>
+      <div><span id="periodTitle">-</span> <span class="periodJumpHint">▾</span></div>
       <div id="periodName" class="sub">氏名未設定</div>
     </div>
     <button id="openSettingsBtn" class="navBtn" aria-label="設定">⚙</button>

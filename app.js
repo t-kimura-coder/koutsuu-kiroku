@@ -304,6 +304,11 @@ applyTheme(getTheme());
 
 /* ---------- DOM参照 ---------- */
 
+const loadingView = document.getElementById("loadingView");
+const homeView = document.getElementById("homeView");
+const goToListBtn = document.getElementById("goToListBtn");
+const goToSettingsFromHomeBtn = document.getElementById("goToSettingsFromHomeBtn");
+const homeFromListBtn = document.getElementById("homeFromListBtn");
 const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
@@ -907,7 +912,10 @@ nameBtn.addEventListener("click", () => {
   }
 });
 
-openSettingsBtn.addEventListener("click", () => {
+let settingsReturnTo = "list";
+
+function openSettings(returnTo) {
+  settingsReturnTo = returnTo;
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
   const vehicleInfo = getVehicleInfo();
@@ -915,8 +923,23 @@ openSettingsBtn.addEventListener("click", () => {
   vehicleModelInput.value = vehicleInfo.vehicleModel;
   engineDisplacementInput.value = vehicleInfo.engineDisplacement;
   autoBackupCheckbox.checked = getAutoBackupSetting();
+  homeView.hidden = true;
   listView.hidden = true;
   settingsView.hidden = false;
+}
+
+openSettingsBtn.addEventListener("click", () => openSettings("list"));
+goToSettingsFromHomeBtn.addEventListener("click", () => openSettings("home"));
+
+goToListBtn.addEventListener("click", async () => {
+  homeView.hidden = true;
+  listView.hidden = false;
+  await renderList();
+});
+
+homeFromListBtn.addEventListener("click", () => {
+  listView.hidden = true;
+  homeView.hidden = false;
 });
 
 const settingsTabBtns = document.querySelectorAll(".settingsTabBtn");
@@ -988,10 +1011,14 @@ copyEmailBtn.addEventListener("click", async () => {
   }, 1500);
 });
 
-settingsBackBtn.addEventListener("click", () => {
+settingsBackBtn.addEventListener("click", async () => {
   settingsView.hidden = true;
-  listView.hidden = false;
-  renderList();
+  if (settingsReturnTo === "home") {
+    homeView.hidden = false;
+  } else {
+    listView.hidden = false;
+    await renderList();
+  }
 });
 
 saveOriginalCheckbox.checked = getSaveOriginalSetting();
@@ -1127,4 +1154,8 @@ end2Input.addEventListener("blur", saveCurrentDetail);
 
 /* ---------- 初期化 ---------- */
 
-renderList();
+(async () => {
+  await dbPromise;
+  loadingView.hidden = true;
+  homeView.hidden = false;
+})();
