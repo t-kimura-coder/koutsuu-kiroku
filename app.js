@@ -2,9 +2,17 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 
 if ("serviceWorker" in navigator) {
+  // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
+  // (これが無いと「更新したのに反映されない」状態が次にもう一度開くまで残ってしまう)
+  let swRefreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (swRefreshing) return;
+    swRefreshing = true;
+    location.reload();
+  });
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("service-worker.js").catch(() => {});
   });

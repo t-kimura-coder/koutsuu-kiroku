@@ -822,6 +822,11 @@ html, body {
   gap: 14px;
 }
 
+.listScrollArea .detailBody {
+  flex: none;
+  overflow: visible;
+}
+
 .settingsPanel {
   display: flex;
   flex-direction: column;
