@@ -18,13 +18,20 @@
 <div id="listView" class="view">
   <header class="topbar">
     <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
-    <div class="periodLabel">
+    <div class="periodLabel" id="periodLabelBtn" role="button">
       <div id="periodTitle">-</div>
       <div id="periodName" class="sub">氏名未設定</div>
     </div>
     <button id="openSettingsBtn" class="navBtn" aria-label="設定">⚙</button>
     <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
   </header>
+
+  <div id="periodJumpPanel" class="periodJumpPanel" hidden>
+    <select id="jumpYearSelect"></select>
+    <select id="jumpMonthSelect"></select>
+    <button id="jumpGoBtn" class="ghostBtn jumpGoBtn">移動</button>
+    <button id="jumpTodayBtn" class="ghostBtn jumpTodayBtn">今月</button>
+  </div>
 
   <div id="dayList" class="dayList"></div>
 
@@ -46,50 +53,65 @@
     <div style="width:2.5em"></div>
   </header>
 
+  <div class="settingsTabs">
+    <button class="settingsTabBtn active" data-tab="profile">👤 個人情報</button>
+    <button class="settingsTabBtn" data-tab="options">☑️ オプション</button>
+    <button class="settingsTabBtn" data-tab="theme">🎨 テーマ</button>
+    <button class="settingsTabBtn" data-tab="data">💾 データ管理</button>
+  </div>
+
   <div class="detailBody">
-    <label class="checkboxField">
-      <input type="checkbox" id="saveOriginalCheckbox">
-      <span>撮影時に元画像も写真アプリへ保存する</span>
-    </label>
-    <button id="nameBtn" class="ghostBtn">氏名を設定</button>
+    <div class="settingsPanel" data-panel="profile">
+      <button id="nameBtn" class="ghostBtn">氏名を設定</button>
 
-    <label class="field">
-      <span>車両情報（年式）</span>
-      <input type="text" id="vehicleYearInput" placeholder="例）令和3">
-    </label>
-    <label class="field">
-      <span>車両情報（車種）</span>
-      <input type="text" id="vehicleModelInput" placeholder="例）カローラフィールダー">
-    </label>
-    <label class="field">
-      <span>車両情報（排気量）</span>
-      <input type="text" id="engineDisplacementInput" placeholder="例）1490">
-    </label>
+      <label class="field">
+        <span>車両情報（年式）</span>
+        <input type="text" id="vehicleYearInput" placeholder="例）令和3">
+      </label>
+      <label class="field">
+        <span>車両情報（車種）</span>
+        <input type="text" id="vehicleModelInput" placeholder="例）カローラフィールダー">
+      </label>
+      <label class="field">
+        <span>車両情報（排気量）</span>
+        <input type="text" id="engineDisplacementInput" placeholder="例）1490">
+      </label>
 
-    <label class="field">
-      <span>月次送信先メールアドレス（Boxのアップロード用）</span>
-      <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
-    </label>
+      <label class="field">
+        <span>月次送信先メールアドレス（Boxのアップロード用）</span>
+        <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
+      </label>
+    </div>
 
-    <label class="checkboxField">
-      <input type="checkbox" id="autoBackupCheckbox">
-      <span>一覧に戻るたびに自動でバックアップ送信する（前回送信から一定時間が経っていた場合のみ）</span>
-    </label>
+    <div class="settingsPanel" data-panel="options" hidden>
+      <label class="checkboxField">
+        <input type="checkbox" id="saveOriginalCheckbox">
+        <span>撮影時に元画像も写真アプリへ保存する</span>
+      </label>
+      <label class="checkboxField">
+        <input type="checkbox" id="autoBackupCheckbox">
+        <span>一覧に戻るたびに自動でバックアップ送信する（前回送信から一定時間が経っていた場合のみ）</span>
+      </label>
+    </div>
 
-    <label class="field">
-      <span>テーマ</span>
-      <select id="themeSelect">
-        <option value="system">端末に合わせる</option>
-        <option value="light">ライト</option>
-        <option value="dark">ダーク</option>
-      </select>
-    </label>
+    <div class="settingsPanel" data-panel="theme" hidden>
+      <label class="field">
+        <span>テーマ</span>
+        <select id="themeSelect">
+          <option value="system">端末に合わせる</option>
+          <option value="light">ライト</option>
+          <option value="dark">ダーク</option>
+        </select>
+      </label>
+    </div>
 
-    <div class="field">
-      <span>全データのバックアップ（機種変更・不具合対策用）</span>
-      <button id="exportAllBtn" class="ghostBtn">📦 全データをバックアップ</button>
-      <button id="importAllBtn" class="ghostBtn">📥 バックアップから復元</button>
-      <input type="file" id="importAllFileInput" accept="application/json" hidden>
+    <div class="settingsPanel" data-panel="data" hidden>
+      <div class="field">
+        <span>全データのバックアップ（機種変更・不具合対策用）</span>
+        <button id="exportAllBtn" class="ghostBtn">📦 全データをバックアップ</button>
+        <button id="importAllBtn" class="ghostBtn">📥 バックアップから復元</button>
+        <input type="file" id="importAllFileInput" accept="application/json" hidden>
+      </div>
     </div>
   </div>
 </div>

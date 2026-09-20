@@ -97,6 +97,42 @@ html, body {
   flex: 1;
 }
 
+#periodLabelBtn {
+  cursor: pointer;
+}
+
+.periodJumpPanel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.periodJumpPanel[hidden] {
+  display: none;
+}
+
+.periodJumpPanel select {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 14px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.periodJumpPanel .jumpGoBtn,
+.periodJumpPanel .jumpTodayBtn {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
 #periodTitle, #detailDate {
   font-size: 16px;
   font-weight: 600;
@@ -336,6 +372,41 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.settingsTabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 8px 0 8px;
+  background: var(--header-bg);
+  overflow-x: auto;
+}
+
+.settingsTabBtn {
+  flex: 1;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 6px;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--sub);
+}
+
+.settingsTabBtn.active {
+  background: var(--card);
+  color: var(--accent);
+}
+
+.settingsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settingsPanel[hidden] {
+  display: none;
 }
 
 .photoRow {

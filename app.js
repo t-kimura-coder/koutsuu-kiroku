@@ -103,6 +103,13 @@ function shiftPeriod(periodStart, deltaMonths) {
   return new Date(periodStart.getFullYear(), periodStart.getMonth() + deltaMonths, CUTOFF_DAY);
 }
 
+function periodStartForEndMonth(year, endMonthHuman) {
+  // 「year年endMonthHuman月分」(=その月15日締め)の期間開始日を返す
+  const d = new Date(year, endMonthHuman - 1, CUTOFF_DAY);
+  d.setMonth(d.getMonth() - 1);
+  return d;
+}
+
 function fmtPeriodTitle(start, end) {
   const f = (d) => `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
   return `${f(start)} ～ ${f(end)}`;
@@ -305,6 +312,12 @@ const periodNameEl = document.getElementById("periodName");
 const dayListEl = document.getElementById("dayList");
 const prevPeriodBtn = document.getElementById("prevPeriod");
 const nextPeriodBtn = document.getElementById("nextPeriod");
+const periodLabelBtn = document.getElementById("periodLabelBtn");
+const periodJumpPanel = document.getElementById("periodJumpPanel");
+const jumpYearSelect = document.getElementById("jumpYearSelect");
+const jumpMonthSelect = document.getElementById("jumpMonthSelect");
+const jumpGoBtn = document.getElementById("jumpGoBtn");
+const jumpTodayBtn = document.getElementById("jumpTodayBtn");
 const openSettingsBtn = document.getElementById("openSettingsBtn");
 const settingsBackBtn = document.getElementById("settingsBackBtn");
 const nameBtn = document.getElementById("nameBtn");
@@ -841,6 +854,50 @@ nextPeriodBtn.addEventListener("click", () => {
   renderList();
 });
 
+periodLabelBtn.addEventListener("click", () => {
+  if (!periodJumpPanel.hidden) {
+    periodJumpPanel.hidden = true;
+    return;
+  }
+  const periodEnd = periodEndFor(currentPeriodStart);
+  const currentYear = periodEnd.getFullYear();
+  const currentMonth = periodEnd.getMonth() + 1;
+
+  jumpYearSelect.innerHTML = "";
+  for (let y = currentYear - 3; y <= currentYear + 1; y++) {
+    const opt = document.createElement("option");
+    opt.value = String(y);
+    opt.textContent = `${y}年`;
+    if (y === currentYear) opt.selected = true;
+    jumpYearSelect.appendChild(opt);
+  }
+
+  jumpMonthSelect.innerHTML = "";
+  for (let m = 1; m <= 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = String(m);
+    opt.textContent = `${m}月分`;
+    if (m === currentMonth) opt.selected = true;
+    jumpMonthSelect.appendChild(opt);
+  }
+
+  periodJumpPanel.hidden = false;
+});
+
+jumpGoBtn.addEventListener("click", () => {
+  const year = parseInt(jumpYearSelect.value, 10);
+  const month = parseInt(jumpMonthSelect.value, 10);
+  currentPeriodStart = periodStartForEndMonth(year, month);
+  periodJumpPanel.hidden = true;
+  renderList();
+});
+
+jumpTodayBtn.addEventListener("click", () => {
+  currentPeriodStart = periodStartFor(new Date());
+  periodJumpPanel.hidden = true;
+  renderList();
+});
+
 nameBtn.addEventListener("click", () => {
   const current = getUserName();
   const next = prompt("氏名を入力してください", current);
@@ -860,6 +917,19 @@ openSettingsBtn.addEventListener("click", () => {
   autoBackupCheckbox.checked = getAutoBackupSetting();
   listView.hidden = true;
   settingsView.hidden = false;
+});
+
+const settingsTabBtns = document.querySelectorAll(".settingsTabBtn");
+const settingsPanels = document.querySelectorAll(".settingsPanel");
+settingsTabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    settingsTabBtns.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    const target = btn.dataset.tab;
+    settingsPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== target;
+    });
+  });
 });
 
 boxEmailInput.addEventListener("blur", () => {
