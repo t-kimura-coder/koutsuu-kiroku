@@ -338,6 +338,12 @@ html, body {
   text-align: center;
 }
 
+.homeReminder.urgent {
+  background: var(--warning-bg);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .bottomTabs {
   display: flex;
   border-top: 1px solid var(--border);

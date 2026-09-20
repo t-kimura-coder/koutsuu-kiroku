@@ -249,6 +249,14 @@ function shiftPeriod(periodStart, deltaMonths) {
   return new Date(periodStart.getFullYear(), periodStart.getMonth() + deltaMonths, CUTOFF_DAY);
 }
 
+function periodForQuickSend(today) {
+  // 提出期限当日(切り替わり直後)は、まだ送っていないはずの「前の期間」を対象にする
+  if (today.getDate() === CUTOFF_DAY) {
+    return shiftPeriod(periodStartFor(today), -1);
+  }
+  return periodStartFor(today);
+}
+
 function periodStartForEndMonth(year, endMonthHuman) {
   // 「year年endMonthHuman月分」(=その月15日締め)の期間開始日を返す
   const d = new Date(year, endMonthHuman - 1, CUTOFF_DAY);
@@ -582,11 +590,15 @@ async function renderHome() {
     : "年式・車種・排気量を設定";
 
   const daysLeft = daysUntilNextSixteenth(today);
+  const urgent = daysLeft <= 3;
   if (daysLeft === 0) {
-    homeReminder.textContent = "📋 本日が今月分の提出期限です";
+    homeReminder.textContent = "📋 本日が今月分の提出期限です。今すぐ送信しましょう";
+  } else if (urgent) {
+    homeReminder.textContent = `📋 提出期限（毎月16日）まであと ${daysLeft} 日。お早めに送信を`;
   } else {
     homeReminder.textContent = `📋 提出期限（毎月16日）まであと ${daysLeft} 日`;
   }
+  homeReminder.classList.toggle("urgent", urgent);
 }
 
 function daysUntilNextSixteenth(from) {
@@ -1199,7 +1211,7 @@ startTodayBtn.addEventListener("click", async () => {
 });
 
 homeExportBtn.addEventListener("click", async () => {
-  currentPeriodStart = periodStartFor(new Date());
+  currentPeriodStart = periodForQuickSend(new Date());
   await exportCurrentPeriod();
 });
 
