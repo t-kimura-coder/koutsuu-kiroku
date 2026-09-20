@@ -232,6 +232,7 @@
       </div>
     </div>
     <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+    <input type="file" id="photoInputLibrary" accept="image/*" hidden>
 
     <label class="checkboxField">
       <input type="checkbox" id="commuteOnlyCheckbox">
@@ -289,6 +290,15 @@
 <div id="lightbox" class="lightbox" hidden>
   <button id="lightboxCloseBtn" class="lightboxCloseBtn" aria-label="閉じる">✕</button>
   <img id="lightboxImg">
+</div>
+
+<div id="photoChoiceSheet" class="photoChoiceSheet" hidden>
+  <div class="photoChoiceBackdrop"></div>
+  <div class="photoChoicePanel">
+    <button id="photoChoiceCameraBtn" class="photoChoiceBtn">📷 撮影する</button>
+    <button id="photoChoiceLibraryBtn" class="photoChoiceBtn">🖼 過去の写真から選ぶ</button>
+    <button id="photoChoiceCancelBtn" class="photoChoiceBtn photoChoiceCancel">キャンセル</button>
+  </div>
 </div>
 
 <script src="app.js?v=2"></script>

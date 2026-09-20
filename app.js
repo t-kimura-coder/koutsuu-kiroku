@@ -311,6 +311,8 @@ function downscaleImage(file, maxDim = 1280, quality = 0.8) {
 
 let currentPeriodStart = periodStartFor(new Date());
 let currentDetailDate = null; // "YYYY-MM-DD"
+let detailLoading = false; // openDetailの非同期読み込み中はsaveCurrentDetailを走らせない
+let detailDirty = false; // ユーザーが実際に何か操作したか（何もしていない日を保存しないため）
 
 /* ---------- 氏名 ---------- */
 
@@ -349,7 +351,7 @@ function getDestHistory() {
 
 function addDestHistory(value) {
   const v = (value || "").trim();
-  if (!v || DEST_PINNED.includes(v)) return;
+  if (!v || DEST_PINNED.includes(v) || v === COMMUTE_LABEL) return;
   try {
     let list = getDestHistory().filter((x) => x !== v);
     list.unshift(v);
@@ -366,13 +368,21 @@ function applyCommuteOnlyState() {
   destHistoryChips.hidden = commuteOnly;
 }
 
+function escapeHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function renderDestHistoryChips() {
   const chips = [...DEST_PINNED, ...getDestHistory()];
   destHistoryChips.innerHTML = chips
-    .map(
-      (v, i) =>
-        `<button type="button" class="destChip${i < DEST_PINNED.length ? " pinned" : ""}" data-value="${v.replace(/"/g, "&quot;")}">${v}</button>`
-    )
+    .map((v, i) => {
+      const escaped = escapeHtml(v);
+      return `<button type="button" class="destChip${i < DEST_PINNED.length ? " pinned" : ""}" data-value="${escaped}">${escaped}</button>`;
+    })
     .join("");
 }
 
@@ -618,6 +628,12 @@ const retakePhotoEndBtn = document.getElementById("retakePhotoEndBtn");
 const removePhotoEndBtn = document.getElementById("removePhotoEndBtn");
 const saveOriginalEndBtn = document.getElementById("saveOriginalEndBtn");
 const photoInput = document.getElementById("photoInput");
+const photoInputLibrary = document.getElementById("photoInputLibrary");
+const photoChoiceSheet = document.getElementById("photoChoiceSheet");
+const photoChoiceCameraBtn = document.getElementById("photoChoiceCameraBtn");
+const photoChoiceLibraryBtn = document.getElementById("photoChoiceLibraryBtn");
+const photoChoiceCancelBtn = document.getElementById("photoChoiceCancelBtn");
+const photoChoiceBackdrop = document.querySelector(".photoChoiceBackdrop");
 const destinationInput = document.getElementById("destinationInput");
 const destHistoryChips = document.getElementById("destHistoryChips");
 const commuteOnlyCheckbox = document.getElementById("commuteOnlyCheckbox");
@@ -801,6 +817,8 @@ const MAX_PLAUSIBLE_DAILY_KM = 500; // 1日の走行距離としてこれを超�
 
 async function openDetail(dateKey) {
   currentDetailDate = dateKey;
+  detailLoading = true; // 読み込み完了までは、他の日付の保存処理がこのdateKeyに紛れ込まないようにする
+  detailDirty = false;
   const [y, m, d] = dateKey.split("-").map(Number);
   const dateObj = new Date(y, m - 1, d);
   const wd = dateObj.getDay();
@@ -835,6 +853,7 @@ async function openDetail(dateKey) {
 
   listView.hidden = true;
   detailView.hidden = false;
+  detailLoading = false;
 }
 
 function refreshPhotoPreview(slot) {
@@ -865,7 +884,11 @@ function refreshPhotoPreview(slot) {
 
 function requestPhotoCapture(slot) {
   pendingSlot = slot;
-  photoInput.click();
+  photoChoiceSheet.hidden = false;
+}
+
+function closePhotoChoiceSheet() {
+  photoChoiceSheet.hidden = true;
 }
 
 function openLightbox(blob) {
@@ -975,7 +998,7 @@ function setBoxEmail(value) {
 }
 
 async function exportCurrentPeriod(options = {}) {
-  const { skipConfirm = false, periodStart = currentPeriodStart } = options;
+  const { skipConfirm = false, periodStart = currentPeriodStart, markSent = true } = options;
   const start = periodStart;
   const end = periodEndFor(start);
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
@@ -1030,21 +1053,28 @@ async function exportCurrentPeriod(options = {}) {
 
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: "application/json" });
-  const fileName = `走行距離_${payload.name}_${payload.periodStart}.json`;
+  const fileNamePrefix = markSent ? "走行距離" : "走行距離_自動バックアップ";
+  const fileName = `${fileNamePrefix}_${payload.name}_${payload.periodStart}.json`;
   const file = new File([blob], fileName, { type: "application/json" });
 
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: fileName });
-      setSentAt(fmtKey(start), Date.now());
-      renderList();
+      // 自動バックアップは保険的な送信であり、月次提出ボタンからの「送信済み」とは区別する
+      // （自動送信だけで済ませたつもりが、正式な提出をし忘れる事態を防ぐため）
+      if (markSent) {
+        setSentAt(fmtKey(start), Date.now());
+        renderList();
+      }
       return;
     } catch (e) {
       /* ユーザーがキャンセルした場合など */
       return;
     }
   }
-  alert("この端末では共有機能が使えないため、ファイルを直接送信できません。");
+  if (markSent) {
+    alert("この端末では共有機能が使えないため、ファイルを直接送信できません。");
+  }
 }
 
 /* ---------- 全データのバックアップ/復元 ---------- */
@@ -1081,6 +1111,12 @@ async function exportAllDataBackup() {
     vehicleYear: vehicleInfo.vehicleYear,
     vehicleModel: vehicleInfo.vehicleModel,
     engineDisplacement: vehicleInfo.engineDisplacement,
+    boxEmail: getBoxEmail(),
+    theme: getTheme(),
+    autoBackup: getAutoBackupSetting(),
+    saveOriginal: getSaveOriginalSetting(),
+    destHistory: getDestHistory(),
+    sentLog: getSentLog(),
     records: serializedRecords,
   };
 
@@ -1136,12 +1172,45 @@ async function importAllDataBackup(file) {
   if (payload.vehicleYear) setVehicleField("vehicleYear", payload.vehicleYear);
   if (payload.vehicleModel) setVehicleField("vehicleModel", payload.vehicleModel);
   if (payload.engineDisplacement) setVehicleField("engineDisplacement", payload.engineDisplacement);
+  if (payload.boxEmail) setBoxEmail(payload.boxEmail);
+  if (payload.theme) {
+    setTheme(payload.theme);
+    updateThemeToggleIcon();
+  }
+  if (typeof payload.autoBackup === "boolean") setAutoBackupSetting(payload.autoBackup);
+  if (typeof payload.saveOriginal === "boolean") setSaveOriginalSetting(payload.saveOriginal);
+  saveOriginalCheckbox.checked = getSaveOriginalSetting();
+
+  if (Array.isArray(payload.destHistory)) {
+    try {
+      localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(payload.destHistory));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  if (payload.sentLog && typeof payload.sentLog === "object") {
+    // 既存の送信済み記録を消してしまわないよう、日付ごとに新しい方のタイムスタンプを残す
+    const merged = getSentLog();
+    for (const [key, ts] of Object.entries(payload.sentLog)) {
+      if (!merged[key] || ts > merged[key]) merged[key] = ts;
+    }
+    try {
+      localStorage.setItem(SENT_LOG_KEY, JSON.stringify(merged));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  // 設定画面を開いたまま復元した場合に表示が古いままにならないようにする
+  if (!settingsView.hidden) loadSettingsFields();
 
   alert(`${restoredCount}件のデータを復元しました。`);
 }
 
 async function saveCurrentDetail() {
-  if (!currentDetailDate) return;
+  if (!currentDetailDate || detailLoading) return;
+  if (!detailDirty) return; // 何も操作していない日は、前日分の引き継ぎ表示だけでレコードを作らない
   const s = startInput.value !== "" ? parseFloat(startInput.value) : null;
   const e = endInput.value !== "" ? parseFloat(endInput.value) : null;
   let hasBreak = breakCheckbox.checked;
@@ -1168,6 +1237,7 @@ async function saveCurrentDetail() {
 
 async function closeDetailToList() {
   await saveCurrentDetail();
+  currentDetailDate = null;
   detailView.hidden = true;
   listView.hidden = false;
   await renderList();
@@ -1176,6 +1246,7 @@ async function closeDetailToList() {
 
 async function closeDetailToHome() {
   await saveCurrentDetail();
+  currentDetailDate = null;
   detailView.hidden = true;
   await showSection("home");
   await maybeAutoBackup();
@@ -1186,7 +1257,7 @@ async function maybeAutoBackup() {
   const now = Date.now();
   if (now - getLastAutoBackupAt() < AUTO_BACKUP_INTERVAL_MS) return;
   setLastAutoBackupAt(now); // キャンセルされても再送を連発しないよう先に記録
-  await exportCurrentPeriod({ skipConfirm: true, periodStart: periodStartFor(new Date()) });
+  await exportCurrentPeriod({ skipConfirm: true, periodStart: periodForQuickSend(new Date()), markSent: false });
 }
 
 /* ---------- イベント ---------- */
@@ -1408,6 +1479,7 @@ detailHomeBtn.addEventListener("click", closeDetailToHome);
 detailListBtn.addEventListener("click", closeDetailToList);
 detailSettingsBtn.addEventListener("click", async () => {
   await saveCurrentDetail();
+  currentDetailDate = null;
   detailView.hidden = true;
   await showSection("vehicle");
 });
@@ -1439,11 +1511,29 @@ lightboxCloseBtn.addEventListener("click", (ev) => {
   lightbox.hidden = true;
 });
 
-photoInput.addEventListener("change", async () => {
-  const file = photoInput.files[0];
+photoChoiceCameraBtn.addEventListener("click", () => {
+  closePhotoChoiceSheet();
+  photoInput.click();
+});
+photoChoiceLibraryBtn.addEventListener("click", () => {
+  closePhotoChoiceSheet();
+  photoInputLibrary.click();
+});
+photoChoiceCancelBtn.addEventListener("click", () => {
+  pendingSlot = null;
+  closePhotoChoiceSheet();
+});
+photoChoiceBackdrop.addEventListener("click", () => {
+  pendingSlot = null;
+  closePhotoChoiceSheet();
+});
+
+async function handlePhotoFileSelected(input) {
+  const file = input.files[0];
   const slot = pendingSlot;
   const targetDate = currentDetailDate; // 縮小処理中に日付が切り替わっても混線しないよう固定
   pendingSlot = null;
+  input.value = "";
   if (!file || !slot) return;
 
   let blob;
@@ -1452,7 +1542,6 @@ photoInput.addEventListener("change", async () => {
   } catch (e) {
     blob = file;
   }
-  photoInput.value = "";
 
   if (currentDetailDate !== targetDate) {
     // 縮小処理中に別の日付の画面へ移動していた場合、表示中の状態(グローバル変数)を
@@ -1484,9 +1573,13 @@ photoInput.addEventListener("change", async () => {
   } else {
     currentPhotoEnd = blob;
   }
+  detailDirty = true;
   refreshPhotoPreview(slot);
   await saveCurrentDetail();
-});
+}
+
+photoInput.addEventListener("change", () => handlePhotoFileSelected(photoInput));
+photoInputLibrary.addEventListener("change", () => handlePhotoFileSelected(photoInputLibrary));
 
 saveOriginalStartBtn.addEventListener("click", (ev) => {
   ev.stopPropagation();
@@ -1502,6 +1595,7 @@ removePhotoStartBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
   currentPhotoStart = null;
   originalPhotoStart = null;
+  detailDirty = true;
   saveOriginalStartBtn.hidden = true;
   refreshPhotoPreview("start");
   await saveCurrentDetail();
@@ -1511,6 +1605,7 @@ removePhotoEndBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
   currentPhotoEnd = null;
   originalPhotoEnd = null;
+  detailDirty = true;
   saveOriginalEndBtn.hidden = true;
   refreshPhotoPreview("end");
   await saveCurrentDetail();
@@ -1521,10 +1616,20 @@ async function saveDetailAndToast() {
   showSavedToast();
 }
 
+destinationInput.addEventListener("input", () => {
+  detailDirty = true;
+});
+
 destinationInput.addEventListener("blur", () => {
   addDestHistory(destinationInput.value);
   renderDestHistoryChips();
   saveDetailAndToast();
+});
+
+destHistoryChips.addEventListener("mousedown", (ev) => {
+  // チップ押下時に行き先入力欄がblurするとチップ自体が再描画されて消え、
+  // その後のclickイベントが発火しなくなるため、blurを起こさせない
+  if (ev.target.closest(".destChip")) ev.preventDefault();
 });
 
 destHistoryChips.addEventListener("click", (ev) => {
@@ -1533,22 +1638,46 @@ destHistoryChips.addEventListener("click", (ev) => {
   const value = btn.dataset.value;
   const current = destinationInput.value.trim();
   destinationInput.value = current ? `${current} → ${value}` : value;
+  detailDirty = true;
   addDestHistory(value);
   renderDestHistoryChips();
   saveDetailAndToast();
 });
 
+let preCommuteDestination = "";
+
 commuteOnlyCheckbox.addEventListener("change", () => {
+  detailDirty = true;
+  const current = destinationInput.value.trim();
+  if (commuteOnlyCheckbox.checked) {
+    if (current && current !== COMMUTE_LABEL) {
+      if (!confirm(`入力済みの行き先「${current}」は消えますが、よろしいですか？`)) {
+        commuteOnlyCheckbox.checked = false;
+        return;
+      }
+    }
+    preCommuteDestination = current === COMMUTE_LABEL ? "" : current;
+    destinationInput.value = COMMUTE_LABEL;
+  } else {
+    destinationInput.value = preCommuteDestination;
+    preCommuteDestination = "";
+  }
   applyCommuteOnlyState();
-  destinationInput.value = commuteOnlyCheckbox.checked ? COMMUTE_LABEL : "";
   saveDetailAndToast();
 });
-startInput.addEventListener("input", updateSummary);
-endInput.addEventListener("input", updateSummary);
+startInput.addEventListener("input", () => {
+  detailDirty = true;
+  updateSummary();
+});
+endInput.addEventListener("input", () => {
+  detailDirty = true;
+  updateSummary();
+});
 startInput.addEventListener("blur", saveDetailAndToast);
 endInput.addEventListener("blur", saveDetailAndToast);
 
 breakCheckbox.addEventListener("change", async () => {
+  detailDirty = true;
   if (!breakCheckbox.checked && (start2Input.value !== "" || end2Input.value !== "")) {
     if (!confirm("中抜けの再開距離・終了距離2が入力されています。チェックを外すとこの数値は消えますが、よろしいですか？")) {
       breakCheckbox.checked = true;
@@ -1563,8 +1692,14 @@ breakCheckbox.addEventListener("change", async () => {
   updateSummary();
   await saveCurrentDetail();
 });
-start2Input.addEventListener("input", updateSummary);
-end2Input.addEventListener("input", updateSummary);
+start2Input.addEventListener("input", () => {
+  detailDirty = true;
+  updateSummary();
+});
+end2Input.addEventListener("input", () => {
+  detailDirty = true;
+  updateSummary();
+});
 start2Input.addEventListener("blur", saveDetailAndToast);
 end2Input.addEventListener("blur", saveDetailAndToast);
 
