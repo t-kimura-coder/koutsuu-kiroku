@@ -197,9 +197,15 @@
   </header>
 
   <div class="detailBody">
+    <div class="listHero">
+      <img src="hero-illustration.png" class="listHeroImg" alt="">
+      <div class="listHeroCaption listHeroCaptionLeft">一つひとつの走行が、<br>会社の力になる。</div>
+      <div class="listHeroCaption listHeroCaptionRight">今日も、<br>安全な走行を。</div>
+    </div>
+
     <div class="photoRow">
       <div class="photoSlot">
-        <div class="photoSlotLabel">開始距離の写真</div>
+        <div class="photoSlotLabel"><span class="fieldIcon" id="photoIconStart"></span>開始距離の写真</div>
         <div class="photoBox" id="photoBoxStart">
           <img id="photoPreviewStart" hidden>
           <div id="photoPlaceholderStart" class="photoPlaceholder">タップして撮影／選択</div>
@@ -211,7 +217,7 @@
         <button id="saveOriginalStartBtn" class="ghostBtn saveOriginalBtn" hidden>📤 元画像を保存</button>
       </div>
       <div class="photoSlot">
-        <div class="photoSlotLabel">終了距離の写真</div>
+        <div class="photoSlotLabel"><span class="fieldIcon" id="photoIconEnd"></span>終了距離の写真</div>
         <div class="photoBox" id="photoBoxEnd">
           <img id="photoPreviewEnd" hidden>
           <div id="photoPlaceholderEnd" class="photoPlaceholder">タップして撮影／選択</div>
@@ -226,25 +232,27 @@
     <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
 
     <label class="field">
-      <span>行き先・業務内容</span>
+      <span><span class="fieldIcon" id="destIcon"></span>行き先・業務内容</span>
       <textarea id="destinationInput" rows="2" placeholder="例）通勤 / 自宅～現場名～会社～自宅"></textarea>
     </label>
 
     <div class="fieldRow">
       <label class="field">
-        <span>開始距離（始針）</span>
+        <span><span class="fieldIcon" id="startIcon"></span>開始距離（始針）</span>
         <input type="number" id="startInput" inputmode="decimal" step="0.1" placeholder="例）87604.0">
       </label>
       <label class="field">
-        <span>終了距離（終針）</span>
+        <span><span class="fieldIcon" id="endIcon"></span>終了距離（終針）</span>
         <input type="number" id="endInput" inputmode="decimal" step="0.1" placeholder="例）87620.0">
       </label>
     </div>
 
     <label class="checkboxField">
       <input type="checkbox" id="breakCheckbox">
+      <span class="fieldIcon" id="breakIcon"></span>
       <span>中抜け（私用での移動）あり</span>
     </label>
+    <div class="checkboxHelp">休憩・私用などで一時的に車両を離れた場合にチェックしてください。</div>
 
     <div id="breakFieldRow" class="fieldRow" hidden>
       <label class="field">
@@ -257,7 +265,13 @@
       </label>
     </div>
 
-    <div id="distanceSummary" class="summary"></div>
+    <div class="summary">
+      <span class="fieldIcon" id="summaryIcon"></span>
+      <div class="summaryBody">
+        <div id="distanceSummary" class="summaryValue"></div>
+        <span class="autoCalcBadge">自動計算</span>
+      </div>
+    </div>
     <div id="warningBox" class="warningBox" hidden></div>
   </div>
 </div>

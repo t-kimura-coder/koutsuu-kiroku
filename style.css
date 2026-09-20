@@ -759,6 +759,20 @@ html, body {
   font-size: 13px;
   color: var(--text);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fieldIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.fieldIcon svg {
+  display: block;
 }
 
 .photoBox {
@@ -800,6 +814,9 @@ html, body {
 .field > span {
   color: var(--text);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .field input, .field textarea, .field select {
@@ -839,23 +856,44 @@ html, body {
   height: 18px;
 }
 
+.checkboxHelp {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: -8px;
+  padding: 0 2px;
+}
+
 .summary {
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text);
   background: var(--bg);
   border: 1px dashed var(--border);
   border-radius: 10px;
-  padding: 10px 12px;
-  position: relative;
+  padding: 12px 14px;
 }
 
-.summary::before {
-  content: "自動計算";
-  display: block;
+.summary .fieldIcon {
+  flex-shrink: 0;
+}
+
+.summaryBody {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.autoCalcBadge {
   font-size: 10px;
   font-weight: 600;
   color: var(--sub);
-  margin-bottom: 4px;
+  background: var(--muted-bg);
+  border-radius: 6px;
+  padding: 2px 6px;
 }
 
 .saveToast {

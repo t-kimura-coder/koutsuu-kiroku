@@ -95,6 +95,17 @@ const MOON_ICON_SVG = strokeIcon(
   22
 );
 
+const GAUGE_ICON_SVG = strokeIcon(
+  '<path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="15.3" y2="11.7"/>' +
+    '<circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none"/>',
+  20
+);
+
+const PAUSE_ICON_SVG = fillIcon(
+  '<rect x="7" y="5" width="3.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="3.2" height="14" rx="1.2"/>',
+  20
+);
+
 function injectIcon(id, svg) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = svg;
@@ -105,6 +116,13 @@ function injectIcons() {
   injectIcon("settingsHomeBtn", HOME_ICON_SVG);
   injectIcon("detailHomeBtn", HOME_ICON_SVG);
   injectIcon("homeFromListBtn", HOME_ICON_SVG);
+  injectIcon("photoIconStart", CAMERA_ICON_SVG);
+  injectIcon("photoIconEnd", CAMERA_ICON_SVG);
+  injectIcon("destIcon", LIST_ICON_SVG);
+  injectIcon("startIcon", GAUGE_ICON_SVG);
+  injectIcon("endIcon", GAUGE_ICON_SVG);
+  injectIcon("breakIcon", PAUSE_ICON_SVG);
+  injectIcon("summaryIcon", ROAD_ICON_SVG);
   injectIcon("homeStatIconRoad", ROAD_ICON_SVG);
   injectIcon("homeStatIconCal", CALENDAR_ICON_SVG);
   injectIcon("homeStatIconCar", CAR_ICON_SVG);
