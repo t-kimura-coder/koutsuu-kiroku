@@ -1,5 +1,9 @@
 "use strict";
 
+// index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
+// (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
+const APP_VERSION = 5;
+
 /* ---------- アイコン ---------- */
 
 function strokeIcon(paths, size = 20, width = 2.2) {
@@ -647,6 +651,7 @@ const autoBackupCheckbox = document.getElementById("autoBackupCheckbox");
 const exportAllBtn = document.getElementById("exportAllBtn");
 const importAllBtn = document.getElementById("importAllBtn");
 const importAllFileInput = document.getElementById("importAllFileInput");
+const versionLabel = document.getElementById("versionLabel");
 const warningBox = document.getElementById("warningBox");
 
 const detailHomeBtn = document.getElementById("detailHomeBtn");
@@ -1757,6 +1762,7 @@ window.addEventListener("pagehide", () => {
 
 (async () => {
   injectIcons();
+  versionLabel.textContent = `バージョン ${APP_VERSION}`;
   try {
     await dbPromise;
     await renderHome();
