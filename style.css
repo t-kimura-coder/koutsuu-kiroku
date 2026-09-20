@@ -1079,9 +1079,8 @@ html, body {
 .summary {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
   color: var(--text);
   background: var(--bg);
   border: 1px dashed var(--border);
@@ -1089,15 +1088,70 @@ html, body {
   padding: 12px 14px;
 }
 
-.summary .fieldIcon {
-  flex-shrink: 0;
+.summaryHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
 }
 
-.summaryBody {
+.summaryIconBadge {
+  flex-shrink: 0;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--header-bg);
+  color: var(--accent);
+}
+
+.summaryLabelRow {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.summaryLabel {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.summaryExtra {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+
+.summaryExtra:empty {
+  display: none;
+}
+
+.summaryValueWrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.summaryBigValue {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.summaryUnit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.summaryBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .autoCalcBadge {

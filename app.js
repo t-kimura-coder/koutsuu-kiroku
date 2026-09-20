@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 
 /* ---------- アイコン ---------- */
 
@@ -103,6 +103,11 @@ const PAUSE_ICON_SVG = fillIcon(
   20
 );
 
+const CLOCK_ICON_SVG = strokeIcon(
+  '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3.5 2"/>',
+  19
+);
+
 const BACK_ICON_SVG = strokeIcon('<polyline points="15 6 9 12 15 18"/>', 19);
 
 const COPY_ICON_SVG = strokeIcon(
@@ -162,7 +167,9 @@ function injectIcons() {
   injectIcon("destIcon", LIST_ICON_SVG);
   injectIcon("startIcon", GAUGE_ICON_SVG);
   injectIcon("endIcon", GAUGE_ICON_SVG);
-  injectIcon("breakIcon", PAUSE_ICON_SVG);
+  injectIcon("breakIcon", CLOCK_ICON_SVG);
+  injectIcon("start2Icon", CLOCK_ICON_SVG);
+  injectIcon("end2Icon", CLOCK_ICON_SVG);
   injectIcon("summaryIcon", ROAD_ICON_SVG);
   injectIcon("homeStatIconRoad", ROAD_ICON_SVG);
   injectIcon("homeStatIconCal", CALENDAR_ICON_SVG);
@@ -816,7 +823,9 @@ const end2Input = document.getElementById("end2Input");
 const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightboxImg");
 const lightboxCloseBtn = document.getElementById("lightboxCloseBtn");
-const distanceSummary = document.getElementById("distanceSummary");
+const distanceSummaryValue = document.getElementById("distanceSummaryValue");
+const distanceSummaryUnit = document.getElementById("distanceSummaryUnit");
+const distanceSummaryExtra = document.getElementById("distanceSummaryExtra");
 const saveToast = document.getElementById("saveToast");
 
 let saveToastTimer = null;
@@ -1103,16 +1112,20 @@ function updateSummary() {
   };
   const total = totalDistance(rec);
   if (total == null) {
-    distanceSummary.textContent = "走行距離: -";
+    distanceSummaryValue.textContent = "-";
+    distanceSummaryUnit.textContent = "";
+    distanceSummaryExtra.textContent = "";
     return;
   }
-  let text = `走行距離: ${total.toFixed(1)} km`;
+  distanceSummaryValue.textContent = total.toFixed(1);
+  distanceSummaryUnit.textContent = "km";
   if (rec.hasBreak && rec.start2 != null && rec.end2 != null && rec.start != null && rec.end != null) {
     const breakKm = (rec.start2 - rec.end).toFixed(1);
     const grandTotal = (rec.end2 - rec.start).toFixed(1);
-    text += `（中抜け ${breakKm} km／総計 ${grandTotal} km）`;
+    distanceSummaryExtra.textContent = `中抜け ${breakKm} km／総計 ${grandTotal} km`;
+  } else {
+    distanceSummaryExtra.textContent = "";
   }
-  distanceSummary.textContent = text;
 }
 
 function updateWarnings() {
