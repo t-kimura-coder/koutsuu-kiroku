@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -93,27 +93,29 @@
     <button id="openSettingsBtn" class="navBtn" aria-label="設定"></button>
   </header>
 
-  <div class="listHero">
-    <img src="detail-hero.png?v=20" class="listHeroImg" alt="">
-  </div>
-
-  <div class="periodNavBar">
-    <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
-    <div class="periodLabel" id="periodLabelBtn" role="button">
-      <div><span id="periodTitle">-</span> <span class="periodJumpHint">▾</span></div>
-      <div id="sentStatus" class="sentStatus"></div>
+  <div class="listScrollArea">
+    <div class="listHero">
+      <img src="detail-hero.png?v=20" class="listHeroImg" alt="">
     </div>
-    <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
-  </div>
 
-  <div id="periodJumpPanel" class="periodJumpPanel" hidden>
-    <select id="jumpYearSelect"></select>
-    <select id="jumpMonthSelect"></select>
-    <button id="jumpGoBtn" class="ghostBtn jumpGoBtn">移動</button>
-    <button id="jumpTodayBtn" class="ghostBtn jumpTodayBtn">今月</button>
-  </div>
+    <div class="periodNavBar">
+      <button id="prevPeriod" class="navBtn" aria-label="前の期間">◀</button>
+      <div class="periodLabel" id="periodLabelBtn" role="button">
+        <div><span id="periodTitle">-</span> <span class="periodJumpHint">▾</span></div>
+        <div id="sentStatus" class="sentStatus"></div>
+      </div>
+      <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
+    </div>
 
-  <div id="dayList" class="dayList"></div>
+    <div id="periodJumpPanel" class="periodJumpPanel" hidden>
+      <select id="jumpYearSelect"></select>
+      <select id="jumpMonthSelect"></select>
+      <button id="jumpGoBtn" class="ghostBtn jumpGoBtn">移動</button>
+      <button id="jumpTodayBtn" class="ghostBtn jumpTodayBtn">今月</button>
+    </div>
+
+    <div id="dayList" class="dayList"></div>
+  </div>
 
   <footer class="bottombar">
     <button id="exportBtn" class="ghostBtn"><span class="inlineIcon" id="exportIcon"></span>今月分をメールで送信</button>
@@ -359,6 +361,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

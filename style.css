@@ -530,9 +530,12 @@ html, body {
   color: var(--accent);
 }
 
-.dayList {
+.listScrollArea {
   flex: 1;
   overflow-y: auto;
+}
+
+.dayList {
   padding: 8px;
   display: flex;
   flex-direction: column;
