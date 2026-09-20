@@ -376,22 +376,24 @@ html, body {
   margin: 0 auto;
 }
 
-.listHeroCaption {
-  position: absolute;
-  top: 10px;
-  font-size: 12px;
+.periodNavBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 8px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.periodNavBar .periodLabel {
+  flex: 1;
+}
+
+.periodNavBar #periodTitle {
+  font-size: 19px;
   font-weight: 700;
   color: var(--accent);
-  line-height: 1.5;
-}
-
-.listHeroCaptionLeft {
-  left: 12px;
-}
-
-.listHeroCaptionRight {
-  right: 12px;
-  text-align: right;
 }
 
 .periodJumpPanel {
@@ -467,24 +469,13 @@ html, body {
 
 .dayDate {
   width: 3.6em;
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.dayDate.sun,
-.dayDate.sat {
-  display: inline-block;
-  width: auto;
-  min-width: 3.6em;
-  padding: 3px 6px;
-  border-radius: 8px;
   font-weight: 700;
-  color: #fff;
-  text-align: center;
+  font-size: 15px;
+  color: var(--accent);
 }
 
-.dayDate.sun { background: var(--sun); }
-.dayDate.sat { background: var(--sat); }
+.dayDate.sun { color: #b5534a; }
+.dayDate.sat { color: #4a72b5; }
 
 .dayPhotoStatus {
   flex-shrink: 0;
@@ -599,14 +590,6 @@ html, body {
   background: var(--card);
   color: var(--accent);
   font-size: 14px;
-}
-
-.detailListBtn {
-  width: auto;
-  flex: 0 0 auto;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .dangerBtn {
