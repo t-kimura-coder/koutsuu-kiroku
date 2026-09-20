@@ -625,10 +625,12 @@ html, body {
   font-variant-numeric: tabular-nums;
   color: var(--text);
   margin-top: 4px;
+}
+
+.distRow {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  flex-wrap: wrap;
 }
 
 .dayBreakNote {
@@ -653,6 +655,7 @@ html, body {
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
+  margin-top: 2px;
 }
 
 .bottombar {
@@ -1045,6 +1048,30 @@ html, body {
 .destChip.pinned {
   background: var(--accent);
   color: #fff;
+}
+
+.destChipHistory {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px 0 10px;
+}
+
+.destChipLabel {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 5px 0;
+}
+
+.destChipRemove {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1;
+  padding: 5px 4px;
+  opacity: 0.6;
 }
 
 .pinnedDestList {

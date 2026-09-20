@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -502,6 +502,15 @@ function addDestHistory(value) {
   }
 }
 
+function removeDestHistory(value) {
+  try {
+    const list = getDestHistory().filter((x) => x !== value);
+    localStorage.setItem(DEST_HISTORY_KEY, JSON.stringify(list));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 function applyCommuteOnlyState() {
   const commuteOnly = commuteOnlyCheckbox.checked;
   destinationInput.disabled = commuteOnly;
@@ -522,7 +531,15 @@ function renderDestHistoryChips() {
   destHistoryChips.innerHTML = chips
     .map((v, i) => {
       const escaped = escapeHtml(v);
-      return `<button type="button" class="destChip${i < pinned.length ? " pinned" : ""}" data-value="${escaped}">${escaped}</button>`;
+      if (i < pinned.length) {
+        return `<button type="button" class="destChip pinned" data-value="${escaped}">${escaped}</button>`;
+      }
+      return (
+        `<span class="destChip destChipHistory">` +
+        `<button type="button" class="destChipLabel" data-value="${escaped}">${escaped}</button>` +
+        `<button type="button" class="destChipRemove" data-value="${escaped}" aria-label="履歴から削除">✕</button>` +
+        `</span>`
+      );
     })
     .join("");
 }
@@ -974,9 +991,9 @@ async function renderList() {
     const startText = rec && rec.start != null ? rec.start : "－";
     const endText = rec && rec.end != null ? rec.end : "－";
     const seg1 = rec && rec.start != null && rec.end != null ? rec.end - rec.start : null;
-    let distHtml = `<span class="distNum">${startText}</span> → <span class="distNum">${endText}</span>`;
+    let distHtml = `<div class="distRow"><span class="distNum">${startText}</span> → <span class="distNum">${endText}</span></div>`;
     if (seg1 != null) {
-      distHtml += `<span class="distKm">＝ ${seg1.toFixed(1)} km</span>`;
+      distHtml += `<div class="distKm">＝ ${seg1.toFixed(1)} km</div>`;
     }
     dist.innerHTML = distHtml;
     info.appendChild(dist);
@@ -1964,7 +1981,13 @@ destHistoryChips.addEventListener("mousedown", (ev) => {
 });
 
 destHistoryChips.addEventListener("click", (ev) => {
-  const btn = ev.target.closest(".destChip");
+  const removeBtn = ev.target.closest(".destChipRemove");
+  if (removeBtn) {
+    removeDestHistory(removeBtn.dataset.value);
+    renderDestHistoryChips();
+    return;
+  }
+  const btn = ev.target.closest(".destChipLabel, .destChip.pinned");
   if (!btn) return;
   const value = btn.dataset.value;
   const current = destinationInput.value.trim();
