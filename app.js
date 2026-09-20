@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 27;
+const APP_VERSION = 28;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -1629,11 +1629,13 @@ function setActiveBottomTab(target) {
 }
 
 async function showSection(target) {
-  setActiveBottomTab(target);
+  // 画面がhidden(display:none)のままインジケーターの位置を変えるとtransitionが効かず
+  // 瞬間移動して見えるため、表示を切り替えた後・次のフレームで動かす
   if (target === "home") {
     settingsView.hidden = true;
     listView.hidden = true;
     homeView.hidden = false;
+    requestAnimationFrame(() => setActiveBottomTab(target));
     await renderHome();
     return;
   }
@@ -1645,6 +1647,7 @@ async function showSection(target) {
   homeView.hidden = true;
   listView.hidden = true;
   settingsView.hidden = false;
+  requestAnimationFrame(() => setActiveBottomTab(target));
 }
 
 bottomTabBtns.forEach((btn) => {

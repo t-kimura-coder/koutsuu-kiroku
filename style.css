@@ -885,6 +885,7 @@ html, body {
 .photoRow {
   display: flex;
   gap: 10px;
+  margin-bottom: 8px;
 }
 
 .photoSlot {
@@ -1147,7 +1148,7 @@ html, body {
 
 .summaryHead {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
