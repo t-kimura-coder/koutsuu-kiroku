@@ -504,6 +504,12 @@ function setTheme(theme) {
 
 applyTheme(getTheme());
 
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (getTheme() === "system") updateThemeToggleIcon();
+  });
+}
+
 /* ---------- DOM参照 ---------- */
 
 const loadingView = document.getElementById("loadingView");
@@ -627,12 +633,12 @@ async function renderHome() {
 }
 
 function daysUntilNextSixteenth(from) {
+  const fromMid = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   const deadline = new Date(from.getFullYear(), from.getMonth(), 16);
-  if (deadline < from) {
+  if (deadline < fromMid) {
     deadline.setMonth(deadline.getMonth() + 1);
   }
   const msPerDay = 24 * 60 * 60 * 1000;
-  const fromMid = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   return Math.round((deadline - fromMid) / msPerDay);
 }
 
@@ -845,19 +851,18 @@ function updateSummary() {
     start2: start2Input.value !== "" ? parseFloat(start2Input.value) : null,
     end2: end2Input.value !== "" ? parseFloat(end2Input.value) : null,
   };
-  if (rec.hasBreak && rec.start2 != null && rec.end2 != null && rec.start != null && rec.end != null) {
-    const grandTotal = (rec.end2 - rec.start).toFixed(1);
-    const breakKm = (rec.start2 - rec.end).toFixed(1);
-    distanceSummary.textContent =
-      `走行距離: ${grandTotal} km（${rec.start2} → ${rec.end2}　中抜け ${breakKm} km）`;
-    return;
-  }
   const total = totalDistance(rec);
   if (total == null) {
     distanceSummary.textContent = "走行距離: -";
     return;
   }
-  distanceSummary.textContent = `走行距離: ${total.toFixed(1)} km`;
+  let text = `走行距離: ${total.toFixed(1)} km`;
+  if (rec.hasBreak && rec.start2 != null && rec.end2 != null && rec.start != null && rec.end != null) {
+    const breakKm = (rec.start2 - rec.end).toFixed(1);
+    const grandTotal = (rec.end2 - rec.start).toFixed(1);
+    text += `（中抜け ${breakKm} km／総計 ${grandTotal} km）`;
+  }
+  distanceSummary.textContent = text;
 }
 
 function updateWarnings() {
@@ -873,6 +878,9 @@ function updateWarnings() {
   }
   if (hasBreak && start2 != null && end2 != null && end2 < start2) {
     messages.push("終了距離2が再開距離より小さくなっています。");
+  }
+  if (hasBreak && start2 != null && end != null && start2 < end) {
+    messages.push("再開距離が終針より小さくなっています。");
   }
   if (start != null && previousDayEnd != null && start < previousDayEnd) {
     messages.push(`前日の終針（${previousDayEnd}）より小さい値です。`);
@@ -907,8 +915,8 @@ function setBoxEmail(value) {
 }
 
 async function exportCurrentPeriod(options = {}) {
-  const { skipConfirm = false } = options;
-  const start = currentPeriodStart;
+  const { skipConfirm = false, periodStart = currentPeriodStart } = options;
+  const start = periodStart;
   const end = periodEndFor(start);
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
 
@@ -1049,11 +1057,19 @@ async function importAllDataBackup(file) {
     return;
   }
 
-  for (const r of records) {
-    const rec = { ...r };
-    if (rec.photoStart) rec.photoStart = await dataUrlToBlob(rec.photoStart);
-    if (rec.photoEnd) rec.photoEnd = await dataUrlToBlob(rec.photoEnd);
-    await putRecord(rec);
+  let restoredCount = 0;
+  try {
+    for (const r of records) {
+      if (!r || !r.date) continue;
+      const rec = { ...r };
+      if (rec.photoStart) rec.photoStart = await dataUrlToBlob(rec.photoStart);
+      if (rec.photoEnd) rec.photoEnd = await dataUrlToBlob(rec.photoEnd);
+      await putRecord(rec);
+      restoredCount++;
+    }
+  } catch (e) {
+    alert(`復元中にエラーが発生しました（${restoredCount}件まで復元済みです）。ファイルが壊れている可能性があります。`);
+    return;
   }
 
   if (payload.name) setUserName(payload.name);
@@ -1061,7 +1077,7 @@ async function importAllDataBackup(file) {
   if (payload.vehicleModel) setVehicleField("vehicleModel", payload.vehicleModel);
   if (payload.engineDisplacement) setVehicleField("engineDisplacement", payload.engineDisplacement);
 
-  alert(`${records.length}件のデータを復元しました。`);
+  alert(`${restoredCount}件のデータを復元しました。`);
 }
 
 async function saveCurrentDetail() {
@@ -1105,7 +1121,7 @@ async function maybeAutoBackup() {
   const now = Date.now();
   if (now - getLastAutoBackupAt() < AUTO_BACKUP_INTERVAL_MS) return;
   setLastAutoBackupAt(now); // キャンセルされても再送を連発しないよう先に記録
-  await exportCurrentPeriod({ skipConfirm: true });
+  await exportCurrentPeriod({ skipConfirm: true, periodStart: periodStartFor(new Date()) });
 }
 
 /* ---------- イベント ---------- */
@@ -1230,6 +1246,7 @@ themeToggleBtn.addEventListener("click", () => {
 });
 
 goToListBtn.addEventListener("click", async () => {
+  currentPeriodStart = periodStartFor(new Date());
   homeView.hidden = true;
   listView.hidden = false;
   await renderList();
@@ -1459,12 +1476,31 @@ end2Input.addEventListener("input", updateSummary);
 start2Input.addEventListener("blur", saveDetailAndToast);
 end2Input.addEventListener("blur", saveDetailAndToast);
 
+// アプリがバックグラウンドに回る/閉じられるとblurが発火しないことがあるため、
+// フォーカスを外さずに離脱しても入力中の内容が消えないようにする保険
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    saveCurrentDetail();
+  }
+});
+window.addEventListener("pagehide", () => {
+  saveCurrentDetail();
+});
+
 /* ---------- 初期化 ---------- */
 
 (async () => {
   injectIcons();
-  await dbPromise;
-  await renderHome();
+  try {
+    await dbPromise;
+    await renderHome();
+  } catch (e) {
+    loadingView.hidden = true;
+    alert(
+      "データの読み込みに失敗しました。プライベートブラウズモードや、端末のストレージ空き容量不足が原因の可能性があります。ブラウザの設定を確認し、アプリを再度開いてください。"
+    );
+    return;
+  }
   loadingView.hidden = true;
   homeView.hidden = false;
 })();

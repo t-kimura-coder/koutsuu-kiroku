@@ -66,6 +66,7 @@ html, body {
 }
 
 #homeView {
+  min-height: 0;
   height: 100vh;
   height: 100dvh;
 }
@@ -495,12 +496,6 @@ html, body {
   color: var(--accent);
 }
 
-.sub {
-  font-size: 12px;
-  color: var(--sub);
-  margin-top: 2px;
-}
-
 .dayList {
   flex: 1;
   padding: 8px;
@@ -521,7 +516,7 @@ html, body {
 }
 
 .dayRow:active {
-  background: #eef1f7;
+  background: var(--muted-bg);
 }
 
 .dayDate {
@@ -659,12 +654,6 @@ html, body {
   font-size: 14px;
 }
 
-.dangerBtn {
-  color: var(--danger);
-  margin: 8px 16px 0;
-  width: auto;
-}
-
 .photoSlotActions {
   display: flex;
   gap: 6px;
@@ -734,31 +723,6 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.settingsTabs {
-  display: flex;
-  gap: 4px;
-  padding: 8px 8px 0 8px;
-  background: var(--header-bg);
-  overflow-x: auto;
-}
-
-.settingsTabBtn {
-  flex: 1;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 6px;
-  border: none;
-  border-radius: 10px 10px 0 0;
-  background: transparent;
-  color: var(--sub);
-}
-
-.settingsTabBtn.active {
-  background: var(--card);
-  color: var(--accent);
 }
 
 .settingsPanel {
