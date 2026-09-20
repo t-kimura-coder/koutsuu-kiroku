@@ -65,6 +65,11 @@ html, body {
   min-height: 100vh;
 }
 
+#homeView {
+  height: 100vh;
+  height: 100dvh;
+}
+
 .view[hidden] {
   display: none;
 }
@@ -313,8 +318,8 @@ html, body {
   font-size: 14px;
   font-weight: 600;
   border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card);
+  border: 1px solid var(--accent);
+  background: var(--header-bg);
   color: var(--accent);
   display: flex;
   align-items: center;
@@ -504,9 +509,19 @@ html, body {
 
 .dayDate {
   width: 3.6em;
+  flex-shrink: 0;
   font-weight: 700;
-  font-size: 15px;
   color: var(--accent);
+}
+
+.dayDateNum {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.dayDateWd {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .dayDate.sun { color: #b5534a; }

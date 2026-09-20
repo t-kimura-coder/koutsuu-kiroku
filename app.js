@@ -627,7 +627,9 @@ async function renderList() {
     const wd = d.getDay();
     const dateEl = document.createElement("div");
     dateEl.className = "dayDate" + (wd === 0 ? " sun" : wd === 6 ? " sat" : "");
-    dateEl.textContent = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY_JP[wd]})`;
+    dateEl.innerHTML =
+      `<div class="dayDateNum">${d.getMonth() + 1}/${d.getDate()}</div>` +
+      `<div class="dayDateWd">(${WEEKDAY_JP[wd]})</div>`;
 
     const startPhotoOk = !!(rec && rec.photoStart);
     const endPhotoOk = !!(rec && rec.photoEnd);
