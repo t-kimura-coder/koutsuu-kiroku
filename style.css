@@ -125,21 +125,9 @@ html, body {
   border-top: 3px solid var(--accent);
 }
 
-.homeHeaderTitle {
-  display: flex;
-  flex-direction: column;
-}
-
-.homeTitleText {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.homeTagline {
-  font-size: 12px;
-  color: var(--sub);
-  margin-top: 2px;
+.homeLogoLockup {
+  height: 32px;
+  width: auto;
 }
 
 .homeBody {
@@ -149,6 +137,7 @@ html, body {
   align-items: stretch;
   gap: 14px;
   padding: 16px;
+  padding-bottom: 8px;
   overflow-y: auto;
 }
 
@@ -161,56 +150,84 @@ html, body {
 
 .homeStats {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .homeStatCard {
   flex: 1;
+  min-width: 0;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px 8px;
+  text-align: left;
+  font-family: inherit;
 }
 
-.homeStatLabel {
-  font-size: 11px;
-  color: var(--sub);
-  font-weight: 600;
+.homeStatIcon {
+  color: var(--accent);
   margin-bottom: 4px;
 }
 
+.homeStatIcon svg {
+  display: block;
+}
+
+.homeStatLabel {
+  font-size: 10.5px;
+  color: var(--sub);
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
 .homeStatValue {
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
 }
 
-.homeCard {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
+.homeStatValueSmall {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.homeCardTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
+.homeVehicleCard {
+  border: none;
+  cursor: pointer;
 }
 
 .homeMenuBtn {
   width: 100%;
-  padding: 18px;
-  font-size: 17px;
-  font-weight: 700;
+  padding: 16px 18px;
   border-radius: 14px;
   border: none;
   background: var(--accent);
   color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.homeMenuIcon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.homeMenuDivider {
+  flex-shrink: 0;
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.homeMenuText {
+  flex: 1;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 700;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -236,17 +253,49 @@ html, body {
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .homeReminder {
-  background: var(--warning-bg);
-  color: var(--danger);
-  border: 1px solid var(--danger);
+  background: var(--header-bg);
+  color: var(--accent);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 600;
   text-align: center;
+}
+
+.bottomTabs {
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.bottomTabBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  color: var(--sub);
+  font-size: 10.5px;
+}
+
+.bottomTabBtn.active {
+  color: var(--accent);
+}
+
+.bottomTabIcon {
+  display: flex;
 }
 
 .topbar {
@@ -670,6 +719,10 @@ html, body {
 .fieldRow {
   display: flex;
   gap: 10px;
+}
+
+.fieldRow[hidden] {
+  display: none;
 }
 
 .checkboxField {

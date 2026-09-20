@@ -2,12 +2,108 @@
 
 /* ---------- アイコン ---------- */
 
-const CAMERA_ICON_SVG =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
-  'stroke-linecap="round" stroke-linejoin="round" width="20" height="20">' +
+function strokeIcon(paths, size = 20) {
+  return (
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ` +
+    `stroke-linecap="round" stroke-linejoin="round" width="${size}" height="${size}">` +
+    paths +
+    "</svg>"
+  );
+}
+
+function fillIcon(paths, size = 20) {
+  return `<svg viewBox="0 0 24 24" fill="currentColor" width="${size}" height="${size}">${paths}</svg>`;
+}
+
+const CAMERA_ICON_SVG = strokeIcon(
   '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>' +
-  '<circle cx="12" cy="13" r="3.5"/>' +
-  "</svg>";
+    '<circle cx="12" cy="13" r="3.5"/>'
+);
+
+const GEAR_ICON_SVG = strokeIcon(
+  '<circle cx="12" cy="12" r="3"/>' +
+    '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  18
+);
+
+const CALENDAR_ICON_SVG = strokeIcon(
+  '<rect x="3" y="4" width="18" height="18" rx="2"/>' +
+    '<line x1="16" y1="2" x2="16" y2="6"/>' +
+    '<line x1="8" y1="2" x2="8" y2="6"/>' +
+    '<line x1="3" y1="10" x2="21" y2="10"/>',
+  18
+);
+
+const ROAD_ICON_SVG = strokeIcon(
+  '<path d="M7 21 11 3"/><path d="M17 21 13 3"/>' +
+    '<line x1="12" y1="4" x2="12" y2="7"/>' +
+    '<line x1="12" y1="10.5" x2="12" y2="13.5"/>' +
+    '<line x1="12" y1="17" x2="12" y2="20"/>',
+  18
+);
+
+const CAR_ICON_SVG = strokeIcon(
+  '<path d="M3 13l1.6-4.5A2 2 0 0 1 6.5 7h11a2 2 0 0 1 1.9 1.5L21 13"/>' +
+    '<rect x="2" y="13" width="20" height="5" rx="1.5"/>' +
+    '<circle cx="7" cy="18.5" r="1.5"/>' +
+    '<circle cx="17" cy="18.5" r="1.5"/>',
+  18
+);
+
+const LIST_ICON_SVG = strokeIcon(
+  '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>' +
+    '<polyline points="14 3 14 8 19 8"/>' +
+    '<line x1="8.5" y1="13" x2="15.5" y2="13"/>' +
+    '<line x1="8.5" y1="17" x2="15.5" y2="17"/>',
+  18
+);
+
+const SEND_ICON_SVG = strokeIcon(
+  '<line x1="21" y1="3" x2="10.5" y2="13.5"/>' + '<polygon points="21 3 14 21 10.5 13.5 3 10 21 3"/>',
+  18
+);
+
+const PLAY_ICON_SVG = fillIcon('<polygon points="6,4 20,12 6,20"/>', 20);
+
+const HOME_ICON_SVG = strokeIcon(
+  '<path d="M3 11.5 12 4l9 7.5"/>' +
+    '<path d="M5.5 10v9a1 1 0 0 0 1 1H9.5a1 1 0 0 0 1-1v-4h3v4a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1v-9"/>',
+  18
+);
+
+const OPTIONS_ICON_SVG = strokeIcon(
+  '<path d="M4 6h11"/><circle cx="17.5" cy="6" r="2"/>' +
+    '<path d="M20 12H9"/><circle cx="6.5" cy="12" r="2"/>' +
+    '<path d="M4 18h11"/><circle cx="17.5" cy="18" r="2"/>',
+  18
+);
+
+const OTHER_ICON_SVG = strokeIcon(
+  '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  18
+);
+
+function injectIcon(id, svg) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = svg;
+}
+
+function injectIcons() {
+  injectIcon("goToSettingsFromHomeBtn", GEAR_ICON_SVG);
+  injectIcon("openSettingsBtn", GEAR_ICON_SVG);
+  injectIcon("homeStatIconRoad", ROAD_ICON_SVG);
+  injectIcon("homeStatIconCal", CALENDAR_ICON_SVG);
+  injectIcon("homeStatIconCar", CAR_ICON_SVG);
+  injectIcon("homeMenuPlayIcon", PLAY_ICON_SVG);
+  injectIcon("homeListIcon", LIST_ICON_SVG);
+  injectIcon("homeSendIcon", SEND_ICON_SVG);
+  ["1", "2"].forEach((suffix) => {
+    injectIcon(`tabIconHome${suffix}`, HOME_ICON_SVG);
+    injectIcon(`tabIconVehicle${suffix}`, CAR_ICON_SVG);
+    injectIcon(`tabIconOptions${suffix}`, OPTIONS_ICON_SVG);
+    injectIcon(`tabIconOther${suffix}`, OTHER_ICON_SVG);
+  });
+}
 
 /* ---------- IndexedDB ---------- */
 
@@ -331,7 +427,7 @@ const jumpMonthSelect = document.getElementById("jumpMonthSelect");
 const jumpGoBtn = document.getElementById("jumpGoBtn");
 const jumpTodayBtn = document.getElementById("jumpTodayBtn");
 const openSettingsBtn = document.getElementById("openSettingsBtn");
-const settingsBackBtn = document.getElementById("settingsBackBtn");
+const settingsSectionTitle = document.getElementById("settingsSectionTitle");
 const nameBtn = document.getElementById("nameBtn");
 const saveOriginalCheckbox = document.getElementById("saveOriginalCheckbox");
 const themeSelect = document.getElementById("themeSelect");
@@ -400,20 +496,22 @@ async function renderHome() {
     ? `${vehicleInfo.vehicleModel}（${vehicleInfo.vehicleYear || "年式未設定"}）`
     : "年式・車種・排気量を設定";
 
-  const recordMap = new Map(records.map((r) => [r.date, r]));
-  const lastCheckDate = today < periodEnd ? today : periodEnd;
-  let emptyDays = 0;
-  for (let d = new Date(periodStart); d <= lastCheckDate; d.setDate(d.getDate() + 1)) {
-    const rec = recordMap.get(fmtKey(d));
-    const filled = rec && ((rec.start != null && rec.end != null) || (rec.destination && rec.destination.trim()));
-    if (!filled) emptyDays++;
-  }
-  if (emptyDays > 0) {
-    homeReminder.textContent = `📋 今月まだ記録のない日が ${emptyDays} 日あります`;
-    homeReminder.hidden = false;
+  const daysLeft = daysUntilNextSixteenth(today);
+  if (daysLeft === 0) {
+    homeReminder.textContent = "📋 本日が今月分の提出期限です";
   } else {
-    homeReminder.hidden = true;
+    homeReminder.textContent = `📋 提出期限（毎月16日）まであと ${daysLeft} 日`;
   }
+}
+
+function daysUntilNextSixteenth(from) {
+  const deadline = new Date(from.getFullYear(), from.getMonth(), 16);
+  if (deadline < from) {
+    deadline.setMonth(deadline.getMonth() + 1);
+  }
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const fromMid = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  return Math.round((deadline - fromMid) / msPerDay);
 }
 
 /* ---------- 一覧描画 ---------- */
@@ -960,10 +1058,13 @@ nameBtn.addEventListener("click", () => {
   }
 });
 
-let settingsReturnTo = "list";
+const SETTINGS_SECTION_TITLES = {
+  vehicle: "車両管理",
+  options: "オプション",
+  other: "その他",
+};
 
-function openSettings(returnTo) {
-  settingsReturnTo = returnTo;
+function loadSettingsFields() {
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
   const vehicleInfo = getVehicleInfo();
@@ -971,13 +1072,43 @@ function openSettings(returnTo) {
   vehicleModelInput.value = vehicleInfo.vehicleModel;
   engineDisplacementInput.value = vehicleInfo.engineDisplacement;
   autoBackupCheckbox.checked = getAutoBackupSetting();
+}
+
+const settingsPanels = document.querySelectorAll(".settingsPanel");
+const bottomTabBtns = document.querySelectorAll(".bottomTabBtn");
+
+function setActiveBottomTab(target) {
+  bottomTabBtns.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.target === target);
+  });
+}
+
+async function showSection(target) {
+  setActiveBottomTab(target);
+  if (target === "home") {
+    settingsView.hidden = true;
+    listView.hidden = true;
+    homeView.hidden = false;
+    await renderHome();
+    return;
+  }
+  loadSettingsFields();
+  settingsPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.panel !== target;
+  });
+  settingsSectionTitle.textContent = SETTINGS_SECTION_TITLES[target] || "";
   homeView.hidden = true;
   listView.hidden = true;
   settingsView.hidden = false;
 }
 
-openSettingsBtn.addEventListener("click", () => openSettings("list"));
-goToSettingsFromHomeBtn.addEventListener("click", () => openSettings("home"));
+bottomTabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => showSection(btn.dataset.target));
+});
+
+openSettingsBtn.addEventListener("click", () => showSection("vehicle"));
+goToSettingsFromHomeBtn.addEventListener("click", () => showSection("vehicle"));
+homeVehicleBtn.addEventListener("click", () => showSection("vehicle"));
 
 goToListBtn.addEventListener("click", async () => {
   homeView.hidden = true;
@@ -1002,26 +1133,8 @@ homeExportBtn.addEventListener("click", async () => {
   await exportCurrentPeriod();
 });
 
-homeVehicleBtn.addEventListener("click", () => {
-  openSettings("home");
-  document.querySelector('.settingsTabBtn[data-tab="profile"]').click();
-});
-
 homeReminder.addEventListener("click", () => {
   goToListBtn.click();
-});
-
-const settingsTabBtns = document.querySelectorAll(".settingsTabBtn");
-const settingsPanels = document.querySelectorAll(".settingsPanel");
-settingsTabBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    settingsTabBtns.forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    const target = btn.dataset.tab;
-    settingsPanels.forEach((panel) => {
-      panel.hidden = panel.dataset.panel !== target;
-    });
-  });
 });
 
 boxEmailInput.addEventListener("blur", () => {
@@ -1078,17 +1191,6 @@ copyEmailBtn.addEventListener("click", async () => {
   setTimeout(() => {
     copyEmailBtn.textContent = "📋 コピー";
   }, 1500);
-});
-
-settingsBackBtn.addEventListener("click", async () => {
-  settingsView.hidden = true;
-  if (settingsReturnTo === "home") {
-    homeView.hidden = false;
-    await renderHome();
-  } else {
-    listView.hidden = false;
-    await renderList();
-  }
 });
 
 saveOriginalCheckbox.checked = getSaveOriginalSetting();
@@ -1225,6 +1327,7 @@ end2Input.addEventListener("blur", saveCurrentDetail);
 /* ---------- 初期化 ---------- */
 
 (async () => {
+  injectIcons();
   await dbPromise;
   await renderHome();
   loadingView.hidden = true;

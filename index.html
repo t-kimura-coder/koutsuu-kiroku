@@ -24,11 +24,8 @@
 
 <div id="homeView" class="view" hidden>
   <header class="homeHeader">
-    <div class="homeHeaderTitle">
-      <div class="homeTitleText">走行記録</div>
-      <div class="homeTagline">走る、はたらく、つながる。</div>
-    </div>
-    <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定">⚙</button>
+    <img src="logo-lockup.png" class="homeLogoLockup" alt="走行記録">
+    <button id="goToSettingsFromHomeBtn" class="navBtn" aria-label="設定"></button>
   </header>
 
   <div class="homeBody">
@@ -36,32 +33,49 @@
 
     <div class="homeStats">
       <div class="homeStatCard">
+        <div class="homeStatIcon" id="homeStatIconRoad"></div>
         <div class="homeStatLabel">本日の走行距離</div>
         <div class="homeStatValue" id="homeStatToday">- km</div>
       </div>
       <div class="homeStatCard">
+        <div class="homeStatIcon" id="homeStatIconCal"></div>
         <div class="homeStatLabel">今月の走行距離</div>
         <div class="homeStatValue" id="homeStatMonth">- km</div>
       </div>
+      <button id="homeVehicleBtn" class="homeStatCard homeVehicleCard">
+        <div class="homeStatIcon" id="homeStatIconCar"></div>
+        <div class="homeStatLabel">登録車両</div>
+        <div class="homeStatValue homeStatValueSmall" id="homeVehicleSummary">未設定</div>
+      </button>
     </div>
 
-    <button id="homeVehicleBtn" class="homeCard">
-      <span class="homeCardTitle">🚐 車両登録</span>
-      <span id="homeVehicleSummary" class="sub">年式・車種・排気量を設定</span>
-    </button>
-
     <button id="startTodayBtn" class="homeMenuBtn">
-      ▶ 記録開始
-      <span class="homeMenuSub">今日の走行を記録します</span>
+      <span class="homeMenuIcon" id="homeMenuPlayIcon"></span>
+      <span class="homeMenuDivider"></span>
+      <span class="homeMenuText">
+        記録開始
+        <span class="homeMenuSub">今日の走行を記録します</span>
+      </span>
     </button>
 
     <div class="homeSecondaryRow">
-      <button id="goToListBtn" class="homeSecondaryBtn">📋 今月の記録</button>
-      <button id="homeExportBtn" class="homeSecondaryBtn">📤 今月分を送信</button>
+      <button id="goToListBtn" class="homeSecondaryBtn">
+        <span class="homeSecondaryIcon" id="homeListIcon"></span>今月の記録
+      </button>
+      <button id="homeExportBtn" class="homeSecondaryBtn">
+        <span class="homeSecondaryIcon" id="homeSendIcon"></span>今月分を送信
+      </button>
     </div>
 
-    <div id="homeReminder" class="homeReminder" hidden></div>
+    <div id="homeReminder" class="homeReminder"></div>
   </div>
+
+  <nav class="bottomTabs">
+    <button class="bottomTabBtn active" data-target="home"><span class="bottomTabIcon" id="tabIconHome1"></span>ホーム</button>
+    <button class="bottomTabBtn" data-target="vehicle"><span class="bottomTabIcon" id="tabIconVehicle1"></span>車両管理</button>
+    <button class="bottomTabBtn" data-target="options"><span class="bottomTabIcon" id="tabIconOptions1"></span>オプション</button>
+    <button class="bottomTabBtn" data-target="other"><span class="bottomTabIcon" id="tabIconOther1"></span>その他</button>
+  </nav>
 </div>
 
 <div id="listView" class="view" hidden>
@@ -72,7 +86,7 @@
       <div><span id="periodTitle">-</span> <span class="periodJumpHint">▾</span></div>
       <div id="periodName" class="sub">氏名未設定</div>
     </div>
-    <button id="openSettingsBtn" class="navBtn" aria-label="設定">⚙</button>
+    <button id="openSettingsBtn" class="navBtn" aria-label="設定"></button>
     <button id="nextPeriod" class="navBtn" aria-label="次の期間">▶</button>
   </header>
 
@@ -96,22 +110,13 @@
 
 <div id="settingsView" class="view" hidden>
   <header class="topbar">
-    <button id="settingsBackBtn" class="navBtn" aria-label="戻る">◀ 戻る</button>
     <div class="periodLabel">
-      <div>設定</div>
+      <div id="settingsSectionTitle">車両管理</div>
     </div>
-    <div style="width:2.5em"></div>
   </header>
 
-  <div class="settingsTabs">
-    <button class="settingsTabBtn active" data-tab="profile">👤 個人情報</button>
-    <button class="settingsTabBtn" data-tab="options">☑️ オプション</button>
-    <button class="settingsTabBtn" data-tab="theme">🎨 テーマ</button>
-    <button class="settingsTabBtn" data-tab="data">💾 データ管理</button>
-  </div>
-
   <div class="detailBody">
-    <div class="settingsPanel" data-panel="profile">
+    <div class="settingsPanel" data-panel="vehicle">
       <button id="nameBtn" class="ghostBtn">氏名を設定</button>
 
       <label class="field">
@@ -126,11 +131,6 @@
         <span>車両情報（排気量）</span>
         <input type="text" id="engineDisplacementInput" placeholder="例）1490">
       </label>
-
-      <label class="field">
-        <span>月次送信先メールアドレス（Boxのアップロード用）</span>
-        <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
-      </label>
     </div>
 
     <div class="settingsPanel" data-panel="options" hidden>
@@ -144,7 +144,12 @@
       </label>
     </div>
 
-    <div class="settingsPanel" data-panel="theme" hidden>
+    <div class="settingsPanel" data-panel="other" hidden>
+      <label class="field">
+        <span>月次送信先メールアドレス（Boxのアップロード用）</span>
+        <input type="email" id="boxEmailInput" inputmode="email" autocapitalize="off" autocorrect="off" placeholder="例）xxxxxxxx@u.box.com">
+      </label>
+
       <label class="field">
         <span>テーマ</span>
         <select id="themeSelect">
@@ -153,9 +158,7 @@
           <option value="dark">ダーク</option>
         </select>
       </label>
-    </div>
 
-    <div class="settingsPanel" data-panel="data" hidden>
       <div class="field">
         <span>全データのバックアップ（機種変更・不具合対策用）</span>
         <button id="exportAllBtn" class="ghostBtn">📦 全データをバックアップ</button>
@@ -164,6 +167,13 @@
       </div>
     </div>
   </div>
+
+  <nav class="bottomTabs">
+    <button class="bottomTabBtn" data-target="home"><span class="bottomTabIcon" id="tabIconHome2"></span>ホーム</button>
+    <button class="bottomTabBtn" data-target="vehicle"><span class="bottomTabIcon" id="tabIconVehicle2"></span>車両管理</button>
+    <button class="bottomTabBtn" data-target="options"><span class="bottomTabIcon" id="tabIconOptions2"></span>オプション</button>
+    <button class="bottomTabBtn" data-target="other"><span class="bottomTabIcon" id="tabIconOther2"></span>その他</button>
+  </nav>
 </div>
 
 <div id="detailView" class="view" hidden>
