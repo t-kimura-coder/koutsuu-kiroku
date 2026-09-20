@@ -884,6 +884,16 @@ html, body {
   margin-top: -8px;
 }
 
+.destHistoryChips[hidden] {
+  display: none;
+}
+
+.field textarea:disabled,
+.field input:disabled {
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+}
+
 .destChip {
   font-size: 12px;
   font-weight: 600;

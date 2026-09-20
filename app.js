@@ -334,7 +334,8 @@ function setUserName(name) {
 
 /* ---------- 行き先の履歴（よく使う候補） ---------- */
 
-const DEST_PINNED = ["通勤", "土場"];
+const DEST_PINNED = ["土場"];
+const COMMUTE_LABEL = "通勤";
 const DEST_HISTORY_KEY = "koutsuu-kiroku-dest-history";
 const DEST_HISTORY_MAX = 8;
 
@@ -357,6 +358,12 @@ function addDestHistory(value) {
   } catch (e) {
     /* ignore */
   }
+}
+
+function applyCommuteOnlyState() {
+  const commuteOnly = commuteOnlyCheckbox.checked;
+  destinationInput.disabled = commuteOnly;
+  destHistoryChips.hidden = commuteOnly;
 }
 
 function renderDestHistoryChips() {
@@ -613,6 +620,7 @@ const saveOriginalEndBtn = document.getElementById("saveOriginalEndBtn");
 const photoInput = document.getElementById("photoInput");
 const destinationInput = document.getElementById("destinationInput");
 const destHistoryChips = document.getElementById("destHistoryChips");
+const commuteOnlyCheckbox = document.getElementById("commuteOnlyCheckbox");
 const startInput = document.getElementById("startInput");
 const endInput = document.getElementById("endInput");
 const breakCheckbox = document.getElementById("breakCheckbox");
@@ -813,6 +821,8 @@ async function openDetail(dateKey) {
   refreshPhotoPreview("end");
 
   destinationInput.value = (rec && rec.destination) || "";
+  commuteOnlyCheckbox.checked = destinationInput.value === COMMUTE_LABEL;
+  applyCommuteOnlyState();
   renderDestHistoryChips();
   startInput.value =
     rec && rec.start != null ? rec.start : previousDayEnd != null ? previousDayEnd : "";
@@ -1520,9 +1530,17 @@ destinationInput.addEventListener("blur", () => {
 destHistoryChips.addEventListener("click", (ev) => {
   const btn = ev.target.closest(".destChip");
   if (!btn) return;
-  destinationInput.value = btn.dataset.value;
-  addDestHistory(destinationInput.value);
+  const value = btn.dataset.value;
+  const current = destinationInput.value.trim();
+  destinationInput.value = current ? `${current} → ${value}` : value;
+  addDestHistory(value);
   renderDestHistoryChips();
+  saveDetailAndToast();
+});
+
+commuteOnlyCheckbox.addEventListener("change", () => {
+  applyCommuteOnlyState();
+  destinationInput.value = commuteOnlyCheckbox.checked ? COMMUTE_LABEL : "";
   saveDetailAndToast();
 });
 startInput.addEventListener("input", updateSummary);
