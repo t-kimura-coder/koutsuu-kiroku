@@ -436,6 +436,23 @@ html, body {
   cursor: pointer;
 }
 
+.navBtnBack {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 6px;
+}
+
+.navBtnIcon {
+  display: flex;
+  align-items: center;
+}
+
+.navBtnLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .periodLabel {
   text-align: center;
   flex: 1;

@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 
@@ -257,7 +257,10 @@
 
 <div id="detailView" class="view" hidden>
   <header class="topbar">
-    <button id="detailListBtn" class="navBtn" aria-label="戻る"></button>
+    <button id="detailListBtn" class="navBtn navBtnBack" aria-label="記録一覧に戻る">
+      <span class="navBtnIcon" id="detailListBtnIcon"></span>
+      <span class="navBtnLabel">記録一覧</span>
+    </button>
     <div class="periodLabel">
       <div id="detailDate" class="screenTitle">-</div>
     </div>
@@ -379,6 +382,6 @@
   </div>
 </div>
 
-<script src="app.js?v=31"></script>
+<script src="app.js?v=32"></script>
 </body>
 </html>
