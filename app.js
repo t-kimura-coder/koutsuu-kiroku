@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 35;
+const APP_VERSION = 36;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -172,6 +172,7 @@ const HELP_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-09-21", type: "fix", text: "前回の記録を長期間の休み明けでも確実に探せるよう、開始距離の引き継ぎ処理を改善しました" },
   { date: "2026-09-21", type: "feature", text: "使い方ガイドに実際の画面のスクリーンショットを追加しました" },
   { date: "2026-09-21", type: "feature", text: "ホーム画面右上からも使い方ガイドを開けるようにしました" },
   { date: "2026-09-21", type: "feature", text: "「使い方ガイド」「お知らせ」ページを追加しました" },
@@ -1125,16 +1126,20 @@ const MAX_PLAUSIBLE_DAILY_KM = 500; // 1日の走行距離としてこれを超�
 const PREVIOUS_RECORD_LOOKBACK_DAYS = 14; // 休日を挟んでも遡って直近の記録を見つけるための上限日数
 
 async function findLastRecordWithEnd(fromDateObj) {
-  // 「前日」ではなく「終了距離が入力されている直近の記録」を探す。
-  // 土曜出勤→日曜休み→月曜出勤のように間に休日が挟まっても、月曜の開始距離に
-  // 土曜の終了距離を引き継げるようにするため
-  const d = new Date(fromDateObj);
-  for (let i = 0; i < PREVIOUS_RECORD_LOOKBACK_DAYS; i++) {
-    d.setDate(d.getDate() - 1);
-    const rec = await getRecord(fmtKey(d));
-    if (rec && rec.end != null) return rec;
-  }
-  return null;
+  // 「前日」ではなく「終了距離(中抜け後の終了距離2のみのケースも含む)が入力されている
+  // 直近の記録」を探す。土曜出勤→日曜休み→月曜出勤のように間に休日が挟まっても、
+  // 月曜の開始距離に土曜の終了距離を引き継げるようにするため。
+  // 1件ずつ遡ってIndexedDBを叩くと長期休み明けなどで最大14回の逐次読み取りになるため、
+  // 期間をまとめて1回の読み取りで取得してから絞り込む
+  const rangeEnd = new Date(fromDateObj);
+  rangeEnd.setDate(rangeEnd.getDate() - 1);
+  const rangeStart = new Date(fromDateObj);
+  rangeStart.setDate(rangeStart.getDate() - PREVIOUS_RECORD_LOOKBACK_DAYS);
+  const records = await getRecordsInRange(fmtKey(rangeStart), fmtKey(rangeEnd));
+  const usable = records.filter((r) => r.end != null || (r.hasBreak && r.end2 != null));
+  if (usable.length === 0) return null;
+  usable.sort((a, b) => (a.date < b.date ? 1 : -1)); // 日付が新しい順
+  return usable[0];
 }
 
 async function openDetail(dateKey) {
@@ -1146,39 +1151,48 @@ async function openDetail(dateKey) {
   const wd = dateObj.getDay();
   detailDateEl.textContent = `${y}/${m}/${d}(${WEEKDAY_JP[wd]})`;
 
-  const prevRec = await findLastRecordWithEnd(dateObj);
-  if (currentDetailDate !== dateKey) return; // 待っている間に別の日が開かれた場合、この呼び出しは中断する
-  previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
-  previousDayEndPhoto = prevRec && prevRec.photoEnd ? prevRec.photoEnd : null;
+  try {
+    const prevRec = await findLastRecordWithEnd(dateObj);
+    if (currentDetailDate !== dateKey) return; // 待っている間に別の日が開かれた場合、この呼び出しは中断する
+    previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
+    previousDayEndPhoto = prevRec && prevRec.photoEnd ? prevRec.photoEnd : null;
 
-  const rec = await getRecord(dateKey);
-  if (currentDetailDate !== dateKey) return; // 同上
-  currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
-  currentPhotoEnd = rec && rec.photoEnd ? rec.photoEnd : null;
-  originalPhotoStart = null;
-  originalPhotoEnd = null;
-  saveOriginalStartBtn.hidden = true;
-  saveOriginalEndBtn.hidden = true;
-  refreshPhotoPreview("start");
-  refreshPhotoPreview("end");
+    const rec = await getRecord(dateKey);
+    if (currentDetailDate !== dateKey) return; // 同上
+    currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
+    currentPhotoEnd = rec && rec.photoEnd ? rec.photoEnd : null;
+    originalPhotoStart = null;
+    originalPhotoEnd = null;
+    saveOriginalStartBtn.hidden = true;
+    saveOriginalEndBtn.hidden = true;
+    refreshPhotoPreview("start");
+    refreshPhotoPreview("end");
 
-  destinationInput.value = (rec && rec.destination) || "";
-  commuteOnlyCheckbox.checked = destinationInput.value === COMMUTE_LABEL;
-  preCommuteDestination = ""; // 前に開いていた日の行き先が別の日に紛れ込まないようにする
-  applyCommuteOnlyState();
-  renderDestHistoryChips();
-  startInput.value =
-    rec && rec.start != null ? rec.start : previousDayEnd != null ? previousDayEnd : "";
-  endInput.value = rec && rec.end != null ? rec.end : "";
-  breakCheckbox.checked = !!(rec && rec.hasBreak);
-  breakFieldRow.hidden = !breakCheckbox.checked;
-  start2Input.value = rec && rec.start2 != null ? rec.start2 : "";
-  end2Input.value = rec && rec.end2 != null ? rec.end2 : "";
-  updateSummary();
+    destinationInput.value = (rec && rec.destination) || "";
+    commuteOnlyCheckbox.checked = destinationInput.value === COMMUTE_LABEL;
+    preCommuteDestination = ""; // 前に開いていた日の行き先が別の日に紛れ込まないようにする
+    applyCommuteOnlyState();
+    renderDestHistoryChips();
+    startInput.value =
+      rec && rec.start != null ? rec.start : previousDayEnd != null ? previousDayEnd : "";
+    endInput.value = rec && rec.end != null ? rec.end : "";
+    breakCheckbox.checked = !!(rec && rec.hasBreak);
+    breakFieldRow.hidden = !breakCheckbox.checked;
+    start2Input.value = rec && rec.start2 != null ? rec.start2 : "";
+    end2Input.value = rec && rec.end2 != null ? rec.end2 : "";
+    updateSummary();
 
-  listView.hidden = true;
-  detailView.hidden = false;
-  detailLoading = false;
+    listView.hidden = true;
+    detailView.hidden = false;
+  } catch (err) {
+    console.error("openDetail failed", err);
+    if (currentDetailDate === dateKey) {
+      currentDetailDate = null;
+      alert("記録の読み込みに失敗しました。もう一度お試しください。");
+    }
+  } finally {
+    if (currentDetailDate === dateKey) detailLoading = false;
+  }
 }
 
 function refreshPhotoPreview(slot) {
@@ -1755,9 +1769,20 @@ async function showSection(target) {
   requestAnimationFrame(() => setActiveBottomTab(target));
 }
 
+// 記録詳細画面(detailView)を開いたままお知らせ/ガイド画面に遷移するルートは今のところ無いが、
+// 今後の機能追加で発生しても未保存の編集が失われたり画面が二重表示されたりしないようにする防御策
+async function flushDetailIfOpen() {
+  if (!detailView.hidden) {
+    await saveCurrentDetail({ skipBreakSelfHeal: false });
+    currentDetailDate = null;
+    detailView.hidden = true;
+  }
+}
+
 let announceReturnTarget = "home"; // "home" | "other" — お知らせを閉じたときの戻り先
 
-function openAnnounceView(from) {
+async function openAnnounceView(from) {
+  await flushDetailIfOpen();
   announceReturnTarget = from;
   announceBackLabel.textContent = from === "other" ? "その他" : "ホーム";
   renderAnnounceList();
@@ -1775,7 +1800,8 @@ function closeAnnounceView() {
 
 let guideReturnTarget = "other"; // "home" | "other" — ガイドを閉じたときの戻り先
 
-function openGuideView(from) {
+async function openGuideView(from) {
+  await flushDetailIfOpen();
   guideReturnTarget = from;
   guideBackLabel.textContent = from === "home" ? "ホーム" : "その他";
   homeView.hidden = true;
