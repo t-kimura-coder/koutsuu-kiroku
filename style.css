@@ -462,6 +462,14 @@ html, body {
   margin: 0;
 }
 
+.guideImg {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
 .bottomTabs {
   position: relative;
   display: flex;

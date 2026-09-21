@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 34;
+const APP_VERSION = 35;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -172,6 +172,7 @@ const HELP_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-09-21", type: "feature", text: "使い方ガイドに実際の画面のスクリーンショットを追加しました" },
   { date: "2026-09-21", type: "feature", text: "ホーム画面右上からも使い方ガイドを開けるようにしました" },
   { date: "2026-09-21", type: "feature", text: "「使い方ガイド」「お知らせ」ページを追加しました" },
   { date: "2026-09-21", type: "feature", text: "記録詳細画面の戻るボタンに「記録一覧」の文字を追加しました" },
