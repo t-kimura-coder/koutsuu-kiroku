@@ -362,6 +362,106 @@ html, body {
   border-color: var(--danger);
 }
 
+.homeAnnouncement {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  font-size: 12px;
+  color: var(--sub);
+  text-align: left;
+  cursor: pointer;
+}
+
+.homeAnnouncement[hidden] {
+  display: none;
+}
+
+.homeAnnounceText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.announceTypeBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.announceTypeBadge.feature {
+  color: var(--accent);
+  background: var(--header-bg);
+}
+
+.announceTypeBadge.fix {
+  color: var(--danger);
+  background: var(--warning-bg);
+}
+
+.announceList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.announceCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.announceCardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.announceDate {
+  font-size: 12px;
+  color: var(--sub);
+  font-weight: 600;
+}
+
+.announceCardText {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.guideSection {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.guideSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.guideHeading {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.guideText {
+  font-size: 13px;
+  color: var(--sub);
+  line-height: 1.6;
+  margin: 0;
+}
+
 .bottomTabs {
   position: relative;
   display: flex;

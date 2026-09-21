@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 32;
+const APP_VERSION = 33;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -157,6 +157,60 @@ const MAP_PIN_ICON_SVG = strokeIcon(
   18
 );
 
+const BOOK_ICON_SVG = strokeIcon(
+  '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z"/>' + '<path d="M4 5.5v15"/>',
+  18
+);
+
+const HELP_ICON_SVG = strokeIcon(
+  '<circle cx="12" cy="12" r="9"/>' +
+    '<path d="M9.5 9a2.5 2.5 0 0 1 4.8 1c0 1.5-2.3 1.8-2.3 3.5"/>' +
+    '<circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/>',
+  18
+);
+
+/* ---------- お知らせ ---------- */
+// 新しい項目を配列の先頭に追加していく(新しい順)
+const ANNOUNCEMENTS = [
+  { date: "2026-09-21", type: "feature", text: "「使い方ガイド」「お知らせ」ページを追加しました" },
+  { date: "2026-09-21", type: "feature", text: "記録詳細画面の戻るボタンに「記録一覧」の文字を追加しました" },
+  { date: "2026-09-21", type: "fix", text: "土日などを挟むと開始距離・開始写真の引き継ぎが空になる不具合を修正しました" },
+  { date: "2026-09-21", type: "fix", text: "中抜けのチェックが、写真保存など無関係な操作で消えてしまう不具合を修正しました" },
+  { date: "2026-09-21", type: "feature", text: "開始写真に「前回の終了写真を使う」を追加しました" },
+  { date: "2026-09-21", type: "feature", text: "行き先の履歴を1件ずつ削除できるようにしました" },
+];
+
+function fmtAnnounceDate(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return `${y}/${m}/${d}`;
+}
+
+function announceBadgeHtml(type) {
+  return `<span class="announceTypeBadge ${type}">${type === "fix" ? "修正" : "機能"}</span>`;
+}
+
+function renderHomeAnnouncement() {
+  const latest = ANNOUNCEMENTS[0];
+  if (!latest) {
+    homeAnnouncement.hidden = true;
+    return;
+  }
+  homeAnnounceBadge.className = `announceTypeBadge ${latest.type}`;
+  homeAnnounceBadge.textContent = latest.type === "fix" ? "修正" : "機能";
+  homeAnnounceText.textContent = latest.text;
+  homeAnnouncement.hidden = false;
+}
+
+function renderAnnounceList() {
+  announceListBody.innerHTML = ANNOUNCEMENTS.map(
+    (a) =>
+      `<div class="announceCard">` +
+      `<div class="announceCardHead">${announceBadgeHtml(a.type)}<span class="announceDate">${fmtAnnounceDate(a.date)}</span></div>` +
+      `<div class="announceCardText">${escapeHtml(a.text)}</div>` +
+      `</div>`
+  ).join("");
+}
+
 function injectIcon(id, svg) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = svg;
@@ -216,6 +270,13 @@ function injectIcons() {
   injectIcon("optionsDestHeadingIcon", MAP_PIN_ICON_SVG);
   injectIcon("photoChoicePrevDayIcon", CLOCK_ICON_SVG);
   injectIcon("homeReminderIcon", BELL_ICON_SVG);
+  injectIcon("otherGeneralHeadingIcon", OPTIONS_ICON_SVG);
+  injectIcon("otherHelpHeadingIcon", HELP_ICON_SVG);
+  injectIcon("otherDataHeadingIcon", BACKUP_EXPORT_ICON_SVG);
+  injectIcon("guideIcon", BOOK_ICON_SVG);
+  injectIcon("announceListIcon", BELL_ICON_SVG);
+  injectIcon("announceBackIcon", BACK_ICON_SVG);
+  injectIcon("guideBackIcon", BACK_ICON_SVG);
   updateThemeToggleIcon();
 }
 
@@ -792,6 +853,17 @@ const startTodayBtn = document.getElementById("startTodayBtn");
 const homeExportBtn = document.getElementById("homeExportBtn");
 const homeReminder = document.getElementById("homeReminder");
 const homeReminderText = document.getElementById("homeReminderText");
+const homeAnnouncement = document.getElementById("homeAnnouncement");
+const homeAnnounceBadge = document.getElementById("homeAnnounceBadge");
+const homeAnnounceText = document.getElementById("homeAnnounceText");
+const announceView = document.getElementById("announceView");
+const announceListBody = document.getElementById("announceListBody");
+const announceBackBtn = document.getElementById("announceBackBtn");
+const announceBackLabel = document.getElementById("announceBackLabel");
+const openAnnounceFromOtherBtn = document.getElementById("openAnnounceFromOtherBtn");
+const guideView = document.getElementById("guideView");
+const guideBackBtn = document.getElementById("guideBackBtn");
+const openGuideBtn = document.getElementById("openGuideBtn");
 const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
@@ -923,6 +995,8 @@ async function renderHome() {
     }
     homeReminder.classList.toggle("urgent", urgent);
   }
+
+  renderHomeAnnouncement();
 }
 
 function daysUntilNextSixteenth(from) {
@@ -1675,6 +1749,43 @@ async function showSection(target) {
   settingsView.hidden = false;
   requestAnimationFrame(() => setActiveBottomTab(target));
 }
+
+let announceReturnTarget = "home"; // "home" | "other" — お知らせを閉じたときの戻り先
+
+function openAnnounceView(from) {
+  announceReturnTarget = from;
+  announceBackLabel.textContent = from === "other" ? "その他" : "ホーム";
+  renderAnnounceList();
+  homeView.hidden = true;
+  listView.hidden = true;
+  settingsView.hidden = true;
+  guideView.hidden = true;
+  announceView.hidden = false;
+}
+
+function closeAnnounceView() {
+  announceView.hidden = true;
+  showSection(announceReturnTarget === "other" ? "other" : "home");
+}
+
+function openGuideView() {
+  homeView.hidden = true;
+  listView.hidden = true;
+  settingsView.hidden = true;
+  announceView.hidden = true;
+  guideView.hidden = false;
+}
+
+function closeGuideView() {
+  guideView.hidden = true;
+  showSection("other");
+}
+
+homeAnnouncement.addEventListener("click", () => openAnnounceView("home"));
+openAnnounceFromOtherBtn.addEventListener("click", () => openAnnounceView("other"));
+announceBackBtn.addEventListener("click", closeAnnounceView);
+openGuideBtn.addEventListener("click", openGuideView);
+guideBackBtn.addEventListener("click", closeGuideView);
 
 bottomTabBtns.forEach((btn) => {
   btn.addEventListener("click", () => showSection(btn.dataset.target));
