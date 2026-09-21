@@ -30,6 +30,7 @@
     </div>
     <div class="homeHeaderActions">
       <button id="themeToggleBtn" class="navBtn" aria-label="テーマ切替"></button>
+      <button id="homeGuideBtn" class="navBtn" aria-label="使い方ガイド"></button>
     </div>
   </header>
 
@@ -244,15 +245,6 @@
       </label>
 
       <div class="settingsSectionHeading">
-        <span class="fieldIcon" id="otherHelpHeadingIcon"></span>
-        <span>ヘルプ</span>
-      </div>
-      <div class="field">
-        <button id="openGuideBtn" class="ghostBtn"><span class="inlineIcon" id="guideIcon"></span>使い方ガイド</button>
-        <button id="openAnnounceFromOtherBtn" class="ghostBtn"><span class="inlineIcon" id="announceListIcon"></span>お知らせ一覧</button>
-      </div>
-
-      <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherDataHeadingIcon"></span>
         <span>データ管理</span>
       </div>
@@ -261,6 +253,15 @@
         <button id="exportAllBtn" class="ghostBtn"><span class="inlineIcon" id="backupExportIcon"></span>全データをバックアップ</button>
         <button id="importAllBtn" class="ghostBtn"><span class="inlineIcon" id="backupImportIcon"></span>バックアップから復元</button>
         <input type="file" id="importAllFileInput" accept="application/json" hidden>
+      </div>
+
+      <div class="settingsSectionHeading">
+        <span class="fieldIcon" id="otherHelpHeadingIcon"></span>
+        <span>ヘルプ</span>
+      </div>
+      <div class="field">
+        <button id="openGuideBtn" class="ghostBtn"><span class="inlineIcon" id="guideIcon"></span>使い方ガイド</button>
+        <button id="openAnnounceFromOtherBtn" class="ghostBtn"><span class="inlineIcon" id="announceListIcon"></span>お知らせ一覧</button>
       </div>
 
       <div class="versionLabel" id="versionLabel"></div>
@@ -404,7 +405,7 @@
   <header class="topbar">
     <button id="guideBackBtn" class="navBtn navBtnBack" aria-label="戻る">
       <span class="navBtnIcon" id="guideBackIcon"></span>
-      <span class="navBtnLabel">その他</span>
+      <span class="navBtnLabel" id="guideBackLabel">その他</span>
     </button>
     <div class="periodLabel screenTitle">使い方ガイド</div>
     <div style="width:2.5em"></div>
@@ -454,6 +455,6 @@
   </div>
 </div>
 
-<script src="app.js?v=33"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>

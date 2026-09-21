@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 33;
+const APP_VERSION = 34;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -172,6 +172,7 @@ const HELP_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-09-21", type: "feature", text: "ホーム画面右上からも使い方ガイドを開けるようにしました" },
   { date: "2026-09-21", type: "feature", text: "「使い方ガイド」「お知らせ」ページを追加しました" },
   { date: "2026-09-21", type: "feature", text: "記録詳細画面の戻るボタンに「記録一覧」の文字を追加しました" },
   { date: "2026-09-21", type: "fix", text: "土日などを挟むと開始距離・開始写真の引き継ぎが空になる不具合を修正しました" },
@@ -274,6 +275,7 @@ function injectIcons() {
   injectIcon("otherHelpHeadingIcon", HELP_ICON_SVG);
   injectIcon("otherDataHeadingIcon", BACKUP_EXPORT_ICON_SVG);
   injectIcon("guideIcon", BOOK_ICON_SVG);
+  injectIcon("homeGuideBtn", HELP_ICON_SVG);
   injectIcon("announceListIcon", BELL_ICON_SVG);
   injectIcon("announceBackIcon", BACK_ICON_SVG);
   injectIcon("guideBackIcon", BACK_ICON_SVG);
@@ -863,7 +865,9 @@ const announceBackLabel = document.getElementById("announceBackLabel");
 const openAnnounceFromOtherBtn = document.getElementById("openAnnounceFromOtherBtn");
 const guideView = document.getElementById("guideView");
 const guideBackBtn = document.getElementById("guideBackBtn");
+const guideBackLabel = document.getElementById("guideBackLabel");
 const openGuideBtn = document.getElementById("openGuideBtn");
+const homeGuideBtn = document.getElementById("homeGuideBtn");
 const listView = document.getElementById("listView");
 const detailView = document.getElementById("detailView");
 const settingsView = document.getElementById("settingsView");
@@ -1768,7 +1772,11 @@ function closeAnnounceView() {
   showSection(announceReturnTarget === "other" ? "other" : "home");
 }
 
-function openGuideView() {
+let guideReturnTarget = "other"; // "home" | "other" — ガイドを閉じたときの戻り先
+
+function openGuideView(from) {
+  guideReturnTarget = from;
+  guideBackLabel.textContent = from === "home" ? "ホーム" : "その他";
   homeView.hidden = true;
   listView.hidden = true;
   settingsView.hidden = true;
@@ -1778,13 +1786,14 @@ function openGuideView() {
 
 function closeGuideView() {
   guideView.hidden = true;
-  showSection("other");
+  showSection(guideReturnTarget === "home" ? "home" : "other");
 }
 
 homeAnnouncement.addEventListener("click", () => openAnnounceView("home"));
 openAnnounceFromOtherBtn.addEventListener("click", () => openAnnounceView("other"));
 announceBackBtn.addEventListener("click", closeAnnounceView);
-openGuideBtn.addEventListener("click", openGuideView);
+openGuideBtn.addEventListener("click", () => openGuideView("other"));
+homeGuideBtn.addEventListener("click", () => openGuideView("home"));
 guideBackBtn.addEventListener("click", closeGuideView);
 
 bottomTabBtns.forEach((btn) => {
