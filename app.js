@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 30;
+const APP_VERSION = 31;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -1040,9 +1040,23 @@ let currentPhotoEnd = null;
 let pendingSlot = null; // "start" | "end"
 let originalPhotoStart = null; // 撮影直後の元画像（保存ボタン用、セッション内のみ）
 let originalPhotoEnd = null;
-let previousDayEnd = null; // 前日の最終メーター値(逆行チェック用)
-let previousDayEndPhoto = null; // 前日の終了写真(開始写真へのコピー用)
+let previousDayEnd = null; // 直近の記録日の最終メーター値(逆行チェック用。土日等で前日に記録が無くても遡って探す)
+let previousDayEndPhoto = null; // 直近の記録日の終了写真(開始写真へのコピー用)
 const MAX_PLAUSIBLE_DAILY_KM = 500; // 1日の走行距離としてこれを超える場合は入力ミスを疑う目安
+const PREVIOUS_RECORD_LOOKBACK_DAYS = 14; // 休日を挟んでも遡って直近の記録を見つけるための上限日数
+
+async function findLastRecordWithEnd(fromDateObj) {
+  // 「前日」ではなく「終了距離が入力されている直近の記録」を探す。
+  // 土曜出勤→日曜休み→月曜出勤のように間に休日が挟まっても、月曜の開始距離に
+  // 土曜の終了距離を引き継げるようにするため
+  const d = new Date(fromDateObj);
+  for (let i = 0; i < PREVIOUS_RECORD_LOOKBACK_DAYS; i++) {
+    d.setDate(d.getDate() - 1);
+    const rec = await getRecord(fmtKey(d));
+    if (rec && rec.end != null) return rec;
+  }
+  return null;
+}
 
 async function openDetail(dateKey) {
   currentDetailDate = dateKey;
@@ -1053,8 +1067,7 @@ async function openDetail(dateKey) {
   const wd = dateObj.getDay();
   detailDateEl.textContent = `${y}/${m}/${d}(${WEEKDAY_JP[wd]})`;
 
-  const prevDateObj = new Date(y, m - 1, d - 1);
-  const prevRec = await getRecord(fmtKey(prevDateObj));
+  const prevRec = await findLastRecordWithEnd(dateObj);
   if (currentDetailDate !== dateKey) return; // 待っている間に別の日が開かれた場合、この呼び出しは中断する
   previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
   previousDayEndPhoto = prevRec && prevRec.photoEnd ? prevRec.photoEnd : null;
@@ -1195,13 +1208,13 @@ function updateWarnings() {
     messages.push("再開距離が終針より小さくなっています。");
   }
   if (start != null && previousDayEnd != null && start < previousDayEnd) {
-    messages.push(`前日の終針（${previousDayEnd}）より小さい値です。`);
+    messages.push(`直近の記録の終針（${previousDayEnd}）より小さい値です。`);
   }
   if (start != null && end != null && end - start > MAX_PLAUSIBLE_DAILY_KM) {
     messages.push(`1日の走行距離が${MAX_PLAUSIBLE_DAILY_KM}kmを超えています。入力ミスがないか確認してください。`);
   }
   if (start != null && previousDayEnd != null && start - previousDayEnd > MAX_PLAUSIBLE_DAILY_KM) {
-    messages.push(`前日の終針（${previousDayEnd}）から${MAX_PLAUSIBLE_DAILY_KM}km以上離れています。入力ミスがないか確認してください。`);
+    messages.push(`直近の記録の終針（${previousDayEnd}）から${MAX_PLAUSIBLE_DAILY_KM}km以上離れています。入力ミスがないか確認してください。`);
   }
   if (hasBreak && start2 != null && end2 != null && end2 - start2 > MAX_PLAUSIBLE_DAILY_KM) {
     messages.push(`中抜け後の走行距離が${MAX_PLAUSIBLE_DAILY_KM}kmを超えています。入力ミスがないか確認してください。`);
