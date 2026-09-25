@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 36;
+const APP_VERSION = 37;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -172,6 +172,7 @@ const HELP_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-09-25", type: "fix", text: "写真の処理中に画面を閉じると記録が消えたり写真が壊れて表示されたりする不具合を修正しました" },
   { date: "2026-09-21", type: "fix", text: "前回の記録を長期間の休み明けでも確実に探せるよう、開始距離の引き継ぎ処理を改善しました" },
   { date: "2026-09-21", type: "feature", text: "使い方ガイドに実際の画面のスクリーンショットを追加しました" },
   { date: "2026-09-21", type: "feature", text: "ホーム画面右上からも使い方ガイドを開けるようにしました" },
@@ -948,6 +949,7 @@ const end2Input = document.getElementById("end2Input");
 const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightboxImg");
 const lightboxCloseBtn = document.getElementById("lightboxCloseBtn");
+const photoProcessingOverlay = document.getElementById("photoProcessingOverlay");
 const distanceSummaryValue = document.getElementById("distanceSummaryValue");
 const distanceSummaryUnit = document.getElementById("distanceSummaryUnit");
 const distanceSummaryExtra = document.getElementById("distanceSummaryExtra");
@@ -1229,6 +1231,17 @@ function requestPhotoCapture(slot) {
 
 function closePhotoChoiceSheet() {
   photoChoiceSheet.hidden = true;
+}
+
+// 写真の縮小処理中に画面遷移されると、処理完了時の保存が古いデータで
+// 他の変更を上書きしてしまう(読み込み→書き込みの間に割り込みが起きるため)。
+// スピナーで画面全体の操作をブロックし、その割り込み自体を起こさせない
+function showPhotoProcessing() {
+  photoProcessingOverlay.hidden = false;
+}
+
+function hidePhotoProcessing() {
+  photoProcessingOverlay.hidden = true;
 }
 
 function openLightbox(blob) {
@@ -1606,8 +1619,22 @@ async function saveCurrentDetail(options = {}) {
   });
 }
 
+// 保存失敗時に静かに握りつぶさず、必ずユーザーに知らせる(戻る/中抜け解除など「保存できて
+// いる前提」で処理が続く箇所で、失敗に気づけないまま進んでしまうのを防ぐ)
+async function saveDetailWithErrorAlert(options = {}) {
+  try {
+    await saveCurrentDetail(options);
+    return true;
+  } catch (err) {
+    console.error("save failed", err);
+    alert("保存に失敗しました。もう一度お試しください。");
+    return false;
+  }
+}
+
 async function closeDetailToList() {
-  await saveCurrentDetail({ skipBreakSelfHeal: false });
+  const saved = await saveDetailWithErrorAlert({ skipBreakSelfHeal: false });
+  if (!saved) return; // 保存できていない可能性があるため、一覧には戻らない
   currentDetailDate = null;
   detailView.hidden = true;
   listView.hidden = false;
@@ -1616,7 +1643,8 @@ async function closeDetailToList() {
 }
 
 async function closeDetailToHome() {
-  await saveCurrentDetail({ skipBreakSelfHeal: false });
+  const saved = await saveDetailWithErrorAlert({ skipBreakSelfHeal: false });
+  if (!saved) return; // 保存できていない可能性があるため、ホームには戻らない
   currentDetailDate = null;
   detailView.hidden = true;
   await showSection("home");
@@ -2041,7 +2069,7 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
   saveOriginalStartBtn.hidden = true;
   detailDirty = true;
   refreshPhotoPreview("start");
-  await saveCurrentDetail();
+  await saveDetailWithErrorAlert();
 });
 photoChoiceCancelBtn.addEventListener("click", () => {
   pendingSlot = null;
@@ -2060,46 +2088,63 @@ async function handlePhotoFileSelected(input) {
   input.value = "";
   if (!file || !slot) return;
 
-  let blob;
+  showPhotoProcessing(); // 処理中は画面全体をブロックし、割り込みによる保存事故を防ぐ
   try {
-    blob = await downscaleImage(file);
-  } catch (e) {
-    blob = file;
-  }
-
-  if (currentDetailDate !== targetDate) {
-    // 縮小処理中に別の日付の画面へ移動していた場合、表示中の状態(グローバル変数)を
-    // 汚さないよう、対象の日付のレコードを直接読み書きする
-    const rec = (await getRecord(targetDate)) || { date: targetDate };
-    if (slot === "start") {
-      rec.photoStart = blob;
-    } else {
-      rec.photoEnd = blob;
+    let blob;
+    try {
+      blob = await downscaleImage(file);
+    } catch (e) {
+      // 元のファイルが写真として読み込めない(壊れている/対応していない形式)場合、
+      // そのまま保存すると「？」の壊れた画像として残り続けるだけなので保存自体を諦める
+      alert("この写真は読み込めませんでした。別の写真を選ぶか、もう一度撮影してください。");
+      return;
     }
-    await putRecord(rec);
-    await renderList();
-    return;
-  }
 
-  const saveOriginalBtn = slot === "start" ? saveOriginalStartBtn : saveOriginalEndBtn;
-  if (getSaveOriginalSetting()) {
-    if (slot === "start") {
-      originalPhotoStart = file;
-    } else {
-      originalPhotoEnd = file;
+    if (currentDetailDate !== targetDate) {
+      // 処理中は画面遷移をブロックしているため通常は起きないが、念のための保険
+      try {
+        const rec = (await getRecord(targetDate)) || { date: targetDate };
+        if (slot === "start") {
+          rec.photoStart = blob;
+        } else {
+          rec.photoEnd = blob;
+        }
+        await putRecord(rec);
+        await renderList();
+      } catch (err) {
+        console.error("photo save failed", err);
+        alert("写真の保存に失敗しました。もう一度お試しください。");
+      }
+      return;
     }
-    saveOriginalBtn.hidden = false;
-  } else {
-    saveOriginalBtn.hidden = true;
+
+    const saveOriginalBtn = slot === "start" ? saveOriginalStartBtn : saveOriginalEndBtn;
+    if (getSaveOriginalSetting()) {
+      if (slot === "start") {
+        originalPhotoStart = file;
+      } else {
+        originalPhotoEnd = file;
+      }
+      saveOriginalBtn.hidden = false;
+    } else {
+      saveOriginalBtn.hidden = true;
+    }
+    if (slot === "start") {
+      currentPhotoStart = blob;
+    } else {
+      currentPhotoEnd = blob;
+    }
+    detailDirty = true;
+    refreshPhotoPreview(slot);
+    try {
+      await saveCurrentDetail();
+    } catch (err) {
+      console.error("save failed", err);
+      alert("保存に失敗しました。もう一度お試しください。");
+    }
+  } finally {
+    hidePhotoProcessing();
   }
-  if (slot === "start") {
-    currentPhotoStart = blob;
-  } else {
-    currentPhotoEnd = blob;
-  }
-  detailDirty = true;
-  refreshPhotoPreview(slot);
-  await saveCurrentDetail();
 }
 
 photoInput.addEventListener("change", () => handlePhotoFileSelected(photoInput));
@@ -2122,7 +2167,7 @@ removePhotoStartBtn.addEventListener("click", async (ev) => {
   detailDirty = true;
   saveOriginalStartBtn.hidden = true;
   refreshPhotoPreview("start");
-  await saveCurrentDetail();
+  await saveDetailWithErrorAlert();
 });
 
 removePhotoEndBtn.addEventListener("click", async (ev) => {
@@ -2132,12 +2177,12 @@ removePhotoEndBtn.addEventListener("click", async (ev) => {
   detailDirty = true;
   saveOriginalEndBtn.hidden = true;
   refreshPhotoPreview("end");
-  await saveCurrentDetail();
+  await saveDetailWithErrorAlert();
 });
 
 async function saveDetailAndToast() {
-  await saveCurrentDetail();
-  showSavedToast();
+  const saved = await saveDetailWithErrorAlert();
+  if (saved) showSavedToast();
 }
 
 destinationInput.addEventListener("input", () => {
