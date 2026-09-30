@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 37;
+const APP_VERSION = 38;
 
 if ("serviceWorker" in navigator) {
   // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
@@ -169,9 +169,17 @@ const HELP_ICON_SVG = strokeIcon(
   18
 );
 
+const LINK_ICON_SVG = strokeIcon(
+  '<path d="M9.5 14.5 14.5 9.5"/>' +
+    '<path d="M11 7.5 12.6 5.9a3.5 3.5 0 0 1 5 5L16 12.5"/>' +
+    '<path d="M13 16.5 11.4 18.1a3.5 3.5 0 0 1-5-5L8 11.5"/>',
+  18
+);
+
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-09-30", type: "feature", text: "その他設定からアプリのURLをコピー・共有できるようにしました" },
   { date: "2026-09-25", type: "fix", text: "写真の処理中に画面を閉じると記録が消えたり写真が壊れて表示されたりする不具合を修正しました" },
   { date: "2026-09-21", type: "fix", text: "前回の記録を長期間の休み明けでも確実に探せるよう、開始距離の引き継ぎ処理を改善しました" },
   { date: "2026-09-21", type: "feature", text: "使い方ガイドに実際の画面のスクリーンショットを追加しました" },
@@ -277,6 +285,9 @@ function injectIcons() {
   injectIcon("otherGeneralHeadingIcon", OPTIONS_ICON_SVG);
   injectIcon("otherHelpHeadingIcon", HELP_ICON_SVG);
   injectIcon("otherDataHeadingIcon", BACKUP_EXPORT_ICON_SVG);
+  injectIcon("otherShareHeadingIcon", LINK_ICON_SVG);
+  injectIcon("copyAppUrlIcon", COPY_ICON_SVG);
+  injectIcon("shareAppIcon", SEND_ICON_SVG);
   injectIcon("guideIcon", BOOK_ICON_SVG);
   injectIcon("homeGuideBtn", HELP_ICON_SVG);
   injectIcon("announceListIcon", BELL_ICON_SVG);
@@ -896,6 +907,9 @@ const exportBtn = document.getElementById("exportBtn");
 const exportHintText = document.getElementById("exportHintText");
 const copyEmailBtn = document.getElementById("copyEmailBtn");
 const boxEmailInput = document.getElementById("boxEmailInput");
+const appUrlText = document.getElementById("appUrlText");
+const copyAppUrlBtn = document.getElementById("copyAppUrlBtn");
+const shareAppUrlBtn = document.getElementById("shareAppUrlBtn");
 const vehicleYearInput = document.getElementById("vehicleYearInput");
 const vehicleModelInput = document.getElementById("vehicleModelInput");
 const engineDisplacementInput = document.getElementById("engineDisplacementInput");
@@ -2008,6 +2022,40 @@ copyEmailBtn.addEventListener("click", async () => {
     copyEmailBtn.innerHTML = '<span class="inlineIcon" id="copyIcon"></span>コピー';
     injectIcon("copyIcon", COPY_ICON_SVG);
   }, 1500);
+});
+
+// アプリのURL(index.html以外の場所からでも常に配布用のトップURLになるよう相対解決する)
+const APP_URL = new URL("./", location.href).href;
+appUrlText.textContent = APP_URL;
+
+copyAppUrlBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(APP_URL);
+    copyAppUrlBtn.textContent = "✓ コピーしました";
+  } catch (e) {
+    copyAppUrlBtn.textContent = "コピー失敗";
+  }
+  setTimeout(() => {
+    copyAppUrlBtn.innerHTML = '<span class="inlineIcon" id="copyAppUrlIcon"></span>コピー';
+    injectIcon("copyAppUrlIcon", COPY_ICON_SVG);
+  }, 1500);
+});
+
+shareAppUrlBtn.addEventListener("click", async () => {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "走行距離メモ", text: "走行距離メモアプリ", url: APP_URL });
+    } catch (e) {
+      /* ユーザーがキャンセルした場合など */
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(APP_URL);
+    alert("この端末では共有機能が使えないため、URLをコピーしました。");
+  } catch (e) {
+    alert("共有機能が使えませんでした。上のURLを手動でコピーしてください。");
+  }
 });
 
 saveOriginalCheckbox.checked = getSaveOriginalSetting();
