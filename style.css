@@ -4,6 +4,7 @@
   --text: #1d2b26;
   --sub: #7d857f;
   --accent: #0e5a45;
+  --on-accent: #ffffff; /* アクセント色の上に載せる文字色 */
   --header-bg: #e6f0eb;
   --tab-indicator-bg: #d3e6dc;
   --danger: #d64545;
@@ -23,6 +24,7 @@
     --text: #edf2ee;
     --sub: #a9b4ac;
     --accent: #55b98f;
+    --on-accent: #10241b;
     --header-bg: #22312a;
     --tab-indicator-bg: #2f4a3f;
     --danger: #ff6b6b;
@@ -42,6 +44,7 @@
   --text: #edf2ee;
   --sub: #a9b4ac;
   --accent: #55b98f;
+  --on-accent: #10241b;
   --header-bg: #22312a;
   --tab-indicator-bg: #2f4a3f;
   --danger: #ff6b6b;
@@ -280,7 +283,7 @@ html, body {
   border-radius: 14px;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,7 +299,8 @@ html, body {
   flex-shrink: 0;
   width: 1px;
   align-self: stretch;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--on-accent);
+  opacity: 0.4;
 }
 
 .homeMenuText {
@@ -1037,7 +1041,7 @@ html, body {
   padding: 2px 7px;
   border-radius: 6px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 10.5px;
   font-weight: 700;
   vertical-align: middle;
@@ -1224,7 +1228,7 @@ html, body {
 
 .destChip.pinned {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .destChipHistory {
@@ -1262,7 +1266,7 @@ html, body {
   align-items: center;
   gap: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: 14px;
   padding: 5px 6px 5px 10px;
   font-size: 12px;
@@ -1272,7 +1276,7 @@ html, body {
 .pinnedDestRemove {
   border: none;
   background: none;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   line-height: 1;
   padding: 2px 4px;
