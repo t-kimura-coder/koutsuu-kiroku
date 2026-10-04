@@ -2,16 +2,41 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 38;
+const APP_VERSION = 39;
+
+// 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
+// （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
+// ホームを表示していて何もしていない時にだけ切り替える。初めて開いた時（前の版が無い時）は読み込み直さない
+let swUpdateReady = false;
+let swUpdateToasted = false;
+function maybeApplyUpdate() {
+  if (!swUpdateReady) return;
+  const idle =
+    document.visibilityState === "visible" &&
+    loadingView.hidden &&
+    !homeView.hidden &&
+    photoProcessingOverlay.hidden &&
+    photoChoiceSheet.hidden &&
+    lightbox.hidden &&
+    !hasPendingShot();
+  if (idle) {
+    swUpdateReady = false;
+    location.reload();
+  } else if (!swUpdateToasted) {
+    swUpdateToasted = true;
+    showSavedToast("新しい版が届きました。ホームに戻ると切り替わります");
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") maybeApplyUpdate();
+});
 
 if ("serviceWorker" in navigator) {
-  // 新しいService Workerが有効化されたら、キャッシュ更新済みの状態で1回だけ自動リロードする
-  // (これが無いと「更新したのに反映されない」状態が次にもう一度開くまで残ってしまう)
-  let swRefreshing = false;
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (swRefreshing) return;
-    swRefreshing = true;
-    location.reload();
+    if (!hadController) return;
+    swUpdateReady = true;
+    setTimeout(maybeApplyUpdate, 300);
   });
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("service-worker.js").catch(() => {});
@@ -179,6 +204,8 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-04", type: "feature", text: "その他設定に「写真の点検」を追加しました。「？」で見えない写真を数えて、消して撮り直せます" },
+  { date: "2026-10-04", type: "fix", text: "写真が「？」になる・アプリが固まる・撮影中に落ちる不具合の対策をしました（写真の保存方法の変更、更新時に使用中は読み込み直さない、撮影中に落ちた時のお知らせ）" },
   { date: "2026-09-30", type: "feature", text: "その他設定からアプリのURLをコピー・共有できるようにしました" },
   { date: "2026-09-25", type: "fix", text: "写真の処理中に画面を閉じると記録が消えたり写真が壊れて表示されたりする不具合を修正しました" },
   { date: "2026-09-21", type: "fix", text: "前回の記録を長期間の休み明けでも確実に探せるよう、開始距離の引き継ぎ処理を改善しました" },
@@ -273,6 +300,7 @@ function injectIcons() {
   injectIcon("exportIcon", SEND_ICON_SVG);
   injectIcon("copyIcon", COPY_ICON_SVG);
   injectIcon("backupExportIcon", BACKUP_EXPORT_ICON_SVG);
+  injectIcon("checkPhotosIcon", CAMERA_ICON_SVG);
   injectIcon("backupImportIcon", BACKUP_IMPORT_ICON_SVG);
   injectIcon("saveOriginalIconStart", SEND_ICON_SVG);
   injectIcon("saveOriginalIconEnd", SEND_ICON_SVG);
@@ -309,8 +337,13 @@ function updateThemeToggleIcon() {
 /* ---------- IndexedDB ---------- */
 
 const DB_NAME = "koutsuu-kiroku";
-const DB_VERSION = 1;
-const STORE = "records"; // key: "YYYY-MM-DD"
+const DB_VERSION = 2; // v2: 写真の画像を records から images に分ける
+const STORE = "records"; // key: "YYYY-MM-DD"。写真は hasPhotoStart / hasPhotoEnd の印だけ持つ
+const IMAGE_STORE = "images"; // key: "YYYY-MM-DD|start" / "YYYY-MM-DD|end"、値は {id, blob}
+// iPhone（WebKit）では、読み出した写真をそのまま保存し直すと画像データが消えて「？」になることがある。
+// そのため画像は撮った・選んだ・消した時にだけ images へ書き、行き先や距離の保存では画像に触らない
+
+const imageKey = (dateKey, slot) => `${dateKey}|${slot}`;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -320,24 +353,83 @@ function openDB() {
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: "date" });
       }
+      if (!db.objectStoreNames.contains(IMAGE_STORE)) {
+        db.createObjectStore(IMAGE_STORE, { keyPath: "id" });
+        // これまで records に入れていた写真を images に移す（1回だけ）
+        const tx = req.transaction;
+        const imgs = tx.objectStore(IMAGE_STORE);
+        const cur = tx.objectStore(STORE).openCursor();
+        cur.onsuccess = () => {
+          const c = cur.result;
+          if (!c) return;
+          const rec = c.value;
+          if (rec.photoStart || rec.photoEnd) {
+            for (const [slot, field, flag] of [
+              ["start", "photoStart", "hasPhotoStart"],
+              ["end", "photoEnd", "hasPhotoEnd"],
+            ]) {
+              if (rec[field]) imgs.put({ id: imageKey(rec.date, slot), blob: rec[field] });
+              rec[flag] = !!rec[field];
+              delete rec[field];
+            }
+            c.update(rec);
+          }
+          c.continue();
+        };
+      }
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onversionchange = () => db.close(); // 別タブが新しい版を開けるよう、古い接続は閉じる
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
   });
 }
 
 let dbPromise = openDB();
 
-async function getRecord(dateKey) {
+// 記録に、images の画像(photoStart / photoEnd)を付けて返す（同じトランザクションの中で読む）
+function attachRecordImages(tx, recs, done) {
+  const imgs = tx.objectStore(IMAGE_STORE);
+  const jobs = [];
+  for (const rec of recs) {
+    if (rec.hasPhotoStart) jobs.push([rec, "photoStart", imageKey(rec.date, "start")]);
+    if (rec.hasPhotoEnd) jobs.push([rec, "photoEnd", imageKey(rec.date, "end")]);
+  }
+  let left = jobs.length;
+  if (!left) return done(recs);
+  for (const [rec, field, key] of jobs) {
+    const r = imgs.get(key);
+    r.onsuccess = () => {
+      rec[field] = r.result ? r.result.blob : null;
+      if (--left === 0) done(recs);
+    };
+    r.onerror = () => {
+      rec[field] = null;
+      if (--left === 0) done(recs);
+    };
+  }
+}
+
+// 既定では画像(photoStart / photoEnd)付きで返す。印(hasPhotoStart / hasPhotoEnd)だけで足りない場合以外は
+// { images: false } にして、重い画像を読まない
+async function getRecord(dateKey, { images = true } = {}) {
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readonly");
+    const tx = db.transaction([STORE, IMAGE_STORE], "readonly");
     const req = tx.objectStore(STORE).get(dateKey);
-    req.onsuccess = () => resolve(req.result || null);
+    req.onsuccess = () => {
+      const rec = req.result || null;
+      if (!rec) return resolve(null);
+      if (!images) return resolve(rec);
+      attachRecordImages(tx, [rec], (r) => resolve(r[0]));
+    };
     req.onerror = () => reject(req.error);
   });
 }
 
+// 一覧用。画像は付けず、写真があるかは hasPhotoStart / hasPhotoEnd で見る
 async function getRecordsInRange(startKey, endKey) {
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
@@ -349,23 +441,48 @@ async function getRecordsInRange(startKey, endKey) {
   });
 }
 
-async function getAllRecords() {
+async function getImage(dateKey, slot) {
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readonly");
-    const req = tx.objectStore(STORE).getAll();
-    req.onsuccess = () => resolve(req.result || []);
+    const req = db.transaction(IMAGE_STORE, "readonly").objectStore(IMAGE_STORE).get(imageKey(dateKey, slot));
+    req.onsuccess = () => resolve(req.result ? req.result.blob : null);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function putRecord(record) {
+// バックアップ用。画像付きで全件返す
+async function getAllRecords() {
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(record);
+    const tx = db.transaction([STORE, IMAGE_STORE], "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => attachRecordImages(tx, req.result || [], resolve);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// record.photoStart / photoEnd は「今の写真(無ければ null)」。画像を書き換えるのは
+// writeImages.start / .end が true の時だけで、それ以外は印(hasPhotoStart / hasPhotoEnd)だけを更新する
+async function putRecord(record, writeImages = {}) {
+  const { photoStart, photoEnd, ...meta } = record;
+  meta.hasPhotoStart = !!photoStart;
+  meta.hasPhotoEnd = !!photoEnd;
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([STORE, IMAGE_STORE], "readwrite");
+    tx.objectStore(STORE).put(meta);
+    const imgs = tx.objectStore(IMAGE_STORE);
+    for (const [slot, blob] of [
+      ["start", photoStart],
+      ["end", photoEnd],
+    ]) {
+      if (!writeImages[slot]) continue;
+      if (blob) imgs.put({ id: imageKey(record.date, slot), blob });
+      else imgs.delete(imageKey(record.date, slot));
+    }
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error("transaction aborted"));
   });
 }
 
@@ -450,7 +567,8 @@ function downscaleImage(file, maxDim = 1280, quality = 0.8) {
       canvas.toBlob(
         (blob) => {
           URL.revokeObjectURL(url);
-          resolve(blob);
+          if (blob) resolve(blob);
+          else reject(new Error("toBlob failed"));
         },
         "image/jpeg",
         quality
@@ -923,6 +1041,7 @@ const addPinnedDestBtn = document.getElementById("addPinnedDestBtn");
 const destHistoryMaxInput = document.getElementById("destHistoryMaxInput");
 const exportAllBtn = document.getElementById("exportAllBtn");
 const importAllBtn = document.getElementById("importAllBtn");
+const checkPhotosBtn = document.getElementById("checkPhotosBtn");
 const importAllFileInput = document.getElementById("importAllFileInput");
 const versionLabel = document.getElementById("versionLabel");
 const warningBox = document.getElementById("warningBox");
@@ -982,7 +1101,7 @@ function showSavedToast(message) {
 async function renderHome() {
   const today = new Date();
   const todayKey = fmtKey(today);
-  const todayRec = await getRecord(todayKey);
+  const todayRec = await getRecord(todayKey, { images: false });
   const todayTotal = todayRec ? totalDistance(todayRec) : null;
   homeStatToday.textContent = todayTotal != null ? `${todayTotal.toFixed(1)} km` : "- km";
 
@@ -1070,8 +1189,8 @@ async function renderList() {
       `<div class="dayDateNum">${d.getMonth() + 1}/${d.getDate()}</div>` +
       `<div class="dayDateWd">(${WEEKDAY_JP[wd]})</div>`;
 
-    const startPhotoOk = !!(rec && rec.photoStart);
-    const endPhotoOk = !!(rec && rec.photoEnd);
+    const startPhotoOk = !!(rec && rec.hasPhotoStart);
+    const endPhotoOk = !!(rec && rec.hasPhotoEnd);
     const thumb = document.createElement("div");
     thumb.className = "dayPhotoStatus";
     thumb.innerHTML =
@@ -1134,6 +1253,11 @@ async function renderList() {
 let currentPhotoStart = null;
 let currentPhotoEnd = null;
 let pendingSlot = null; // "start" | "end"
+// 写真を変えた(撮った・選んだ・消した)スロット。保存の時、ここが true の画像だけ images に書く
+const photoWrite = { start: false, end: false };
+const photoBroken = { start: false, end: false }; // 画像が読み込めなかったスロット
+const PHOTO_PLACEHOLDER_TEXT = "タップして撮影／選択";
+const PHOTO_BROKEN_TEXT = "写真を読み込めません\nタップして撮り直し";
 let originalPhotoStart = null; // 撮影直後の元画像（保存ボタン用、セッション内のみ）
 let originalPhotoEnd = null;
 let previousDayEnd = null; // 直近の記録日の最終メーター値(逆行チェック用。土日等で前日に記録が無くても遡って探す)
@@ -1171,12 +1295,17 @@ async function openDetail(dateKey) {
     const prevRec = await findLastRecordWithEnd(dateObj);
     if (currentDetailDate !== dateKey) return; // 待っている間に別の日が開かれた場合、この呼び出しは中断する
     previousDayEnd = prevRec ? (prevRec.hasBreak && prevRec.end2 != null ? prevRec.end2 : prevRec.end) : null;
-    previousDayEndPhoto = prevRec && prevRec.photoEnd ? prevRec.photoEnd : null;
+    // 前の記録の終了写真は、一覧用の読み出しには含まれないので別に読む（読めなくても開始写真のコピーが出ないだけ）
+    previousDayEndPhoto =
+      prevRec && prevRec.hasPhotoEnd ? await getImage(prevRec.date, "end").catch(() => null) : null;
+    if (currentDetailDate !== dateKey) return; // 同上
 
     const rec = await getRecord(dateKey);
     if (currentDetailDate !== dateKey) return; // 同上
     currentPhotoStart = rec && rec.photoStart ? rec.photoStart : null;
     currentPhotoEnd = rec && rec.photoEnd ? rec.photoEnd : null;
+    photoWrite.start = false;
+    photoWrite.end = false;
     originalPhotoStart = null;
     originalPhotoEnd = null;
     saveOriginalStartBtn.hidden = true;
@@ -1221,9 +1350,19 @@ function refreshPhotoPreview(slot) {
     URL.revokeObjectURL(img.dataset.objectUrl);
     delete img.dataset.objectUrl;
   }
+  photoBroken[slot] = false;
+  placeholder.textContent = PHOTO_PLACEHOLDER_TEXT;
   if (blob) {
     const url = URL.createObjectURL(blob);
     img.dataset.objectUrl = url;
+    // 「？」の壊れた画像のまま残さず、読み込めないと分かる表示にして、タップで撮り直せるようにする
+    img.onerror = () => {
+      if (img.dataset.objectUrl !== url) return;
+      photoBroken[slot] = true;
+      img.hidden = true;
+      placeholder.textContent = PHOTO_BROKEN_TEXT;
+      placeholder.hidden = false;
+    };
     img.src = url;
     img.hidden = false;
     placeholder.hidden = true;
@@ -1541,7 +1680,7 @@ async function importAllDataBackup(file) {
       const rec = { ...r };
       if (rec.photoStart) rec.photoStart = await dataUrlToBlob(rec.photoStart);
       if (rec.photoEnd) rec.photoEnd = await dataUrlToBlob(rec.photoEnd);
-      await putRecord(rec);
+      await putRecord(rec, { start: true, end: true });
       restoredCount++;
     }
   } catch (e) {
@@ -1619,18 +1758,28 @@ async function saveCurrentDetail(options = {}) {
     hasBreak = false;
     if (breakCheckbox.checked) breakCheckbox.checked = false;
   }
-  await putRecord({
-    date: currentDetailDate,
-    destination: destinationInput.value,
-    start: s,
-    end: e,
-    hasBreak,
-    start2: s2,
-    end2: e2,
-    photoStart: currentPhotoStart,
-    photoEnd: currentPhotoEnd,
-    updatedAt: Date.now(),
-  });
+  // 写真は変えたスロットだけ images に書く（それ以外の保存で画像を書き直すと、iPhoneで壊れることがある）
+  const writes = { start: photoWrite.start, end: photoWrite.end };
+  const savedStart = currentPhotoStart;
+  const savedEnd = currentPhotoEnd;
+  await putRecord(
+    {
+      date: currentDetailDate,
+      destination: destinationInput.value,
+      start: s,
+      end: e,
+      hasBreak,
+      start2: s2,
+      end2: e2,
+      photoStart: savedStart,
+      photoEnd: savedEnd,
+      updatedAt: Date.now(),
+    },
+    writes
+  );
+  // 保存している間に写真がまた変わっていたら、その分は次の保存で書く
+  if (writes.start && currentPhotoStart === savedStart) photoWrite.start = false;
+  if (writes.end && currentPhotoEnd === savedEnd) photoWrite.end = false;
 }
 
 // 保存失敗時に静かに握りつぶさず、必ずユーザーに知らせる(戻る/中抜け解除など「保存できて
@@ -1798,6 +1947,7 @@ async function showSection(target) {
     homeView.hidden = false;
     requestAnimationFrame(() => setActiveBottomTab(target));
     await renderHome();
+    maybeApplyUpdate();
     return;
   }
   loadSettingsFields();
@@ -1991,6 +2141,80 @@ importAllBtn.addEventListener("click", () => {
   importAllFileInput.click();
 });
 
+/* ---------- 写真の点検 ----------
+   iPhoneでは、保存した写真が読み込めなくなる(「？」の画像になる)ことがまれにある。
+   何枚壊れているか確かめ、読めない写真を消して撮り直せる状態に戻す */
+function canDecodeBlob(blob) {
+  return new Promise((resolve) => {
+    if (!(blob instanceof Blob) || !blob.size) return resolve(false);
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    const done = (ok) => {
+      URL.revokeObjectURL(url);
+      resolve(ok);
+    };
+    img.onload = () => done(img.naturalWidth > 0);
+    img.onerror = () => done(false);
+    setTimeout(() => done(false), 15000);
+    img.src = url;
+  });
+}
+
+async function checkPhotos() {
+  showPhotoProcessing();
+  const bad = [];
+  let total = 0;
+  try {
+    const records = await getAllRecords();
+    for (const r of records) {
+      for (const [slot, field, label] of [
+        ["start", "photoStart", "開始"],
+        ["end", "photoEnd", "終了"],
+      ]) {
+        if (!r["hasPhoto" + (slot === "start" ? "Start" : "End")]) continue;
+        total++;
+        if (!(await canDecodeBlob(r[field]))) bad.push({ date: r.date, slot, label });
+      }
+    }
+  } catch (err) {
+    console.error("checkPhotos failed", err);
+    alert("写真の点検に失敗しました。もう一度お試しください。");
+    return;
+  } finally {
+    hidePhotoProcessing();
+  }
+  if (!bad.length) {
+    alert(`写真 ${total}枚を点検しました。読み込めない写真はありません。`);
+    return;
+  }
+  const lines = bad.slice(0, 8).map((b) => `・${b.date} ${b.label}`);
+  const msg =
+    `写真 ${total}枚のうち、${bad.length}枚が読み込めませんでした。\n${lines.join("\n")}${bad.length > 8 ? `\nほか${bad.length - 8}枚` : ""}\n\n` +
+    "読み込めない写真は元に戻せません。消して、撮り直せる状態にしますか？";
+  if (!confirm(msg)) return;
+  try {
+    const byDate = new Map();
+    for (const b of bad) byDate.set(b.date, [...(byDate.get(b.date) || []), b.slot]);
+    for (const [date, slots] of byDate) {
+      const rec = await getRecord(date);
+      if (!rec) continue;
+      const writes = {};
+      for (const slot of slots) {
+        rec[slot === "start" ? "photoStart" : "photoEnd"] = null;
+        writes[slot] = true;
+      }
+      await putRecord(rec, writes);
+    }
+    await renderList();
+    showSavedToast(`読み込めない写真 ${bad.length}枚を消しました`);
+  } catch (err) {
+    console.error("delete broken photos failed", err);
+    alert("写真を消せませんでした。もう一度お試しください。");
+  }
+}
+
+checkPhotosBtn.addEventListener("click", checkPhotos);
+
 importAllFileInput.addEventListener("change", async () => {
   const file = importAllFileInput.files[0];
   importAllFileInput.value = "";
@@ -2073,11 +2297,11 @@ detailSettingsBtn.addEventListener("click", async () => {
 });
 
 photoBoxStart.addEventListener("click", () => {
-  if (currentPhotoStart) openLightbox(currentPhotoStart);
+  if (currentPhotoStart && !photoBroken.start) openLightbox(currentPhotoStart);
   else requestPhotoCapture("start");
 });
 photoBoxEnd.addEventListener("click", () => {
-  if (currentPhotoEnd) openLightbox(currentPhotoEnd);
+  if (currentPhotoEnd && !photoBroken.end) openLightbox(currentPhotoEnd);
   else requestPhotoCapture("end");
 });
 
@@ -2099,12 +2323,55 @@ lightboxCloseBtn.addEventListener("click", (ev) => {
   lightbox.hidden = true;
 });
 
+/* ---------- 撮影中にアプリが読み込み直された時の対策 ----------
+   メモリの少ないiPhoneでは、カメラから戻った時にアプリ(ページ)が読み込み直されることがあり、
+   その時は撮った写真がアプリに渡されず失われる(取り戻す方法は無い)。
+   せめて「保存されなかった」ことを伝えて撮っていた日へ戻すため、カメラを開く前に行き先を控えておく */
+const PENDING_SHOT_KEY = "koutsuu-kiroku-pending-shot";
+function markPendingShot() {
+  try {
+    sessionStorage.setItem(PENDING_SHOT_KEY, JSON.stringify({ date: currentDetailDate, slot: pendingSlot, at: Date.now() }));
+  } catch (e) {}
+}
+function clearPendingShot() {
+  try {
+    sessionStorage.removeItem(PENDING_SHOT_KEY);
+  } catch (e) {}
+}
+function hasPendingShot() {
+  try {
+    return !!sessionStorage.getItem(PENDING_SHOT_KEY);
+  } catch (e) {
+    return false;
+  }
+}
+// カメラを閉じた(撮らずにキャンセルした)時は控えを消す。撮った時は change の処理で消える
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  setTimeout(() => {
+    if (photoProcessingOverlay.hidden) clearPendingShot();
+  }, 4000);
+});
+async function checkPendingShot() {
+  let p = null;
+  try {
+    p = JSON.parse(sessionStorage.getItem(PENDING_SHOT_KEY) || "null");
+  } catch (e) {}
+  clearPendingShot();
+  if (!p || !p.date || Date.now() - p.at > 15 * 60 * 1000) return;
+  alert("撮影中にアプリが読み込み直されたため、写真を保存できませんでした。\nお手数ですが、もう一度撮影してください。");
+  homeView.hidden = true;
+  await openDetail(p.date);
+}
+
 photoChoiceCameraBtn.addEventListener("click", () => {
   closePhotoChoiceSheet();
+  markPendingShot();
   photoInput.click();
 });
 photoChoiceLibraryBtn.addEventListener("click", () => {
   closePhotoChoiceSheet();
+  markPendingShot();
   photoInputLibrary.click();
 });
 photoChoicePrevDayBtn.addEventListener("click", async () => {
@@ -2112,7 +2379,16 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
   pendingSlot = null;
   closePhotoChoiceSheet();
   if (slot !== "start" || !previousDayEndPhoto) return;
-  currentPhotoStart = previousDayEndPhoto;
+  // 読み出した写真をそのまま別の日に保存し直すと壊れることがあるので、中身を読み直した新しいデータにして使う
+  let copy;
+  try {
+    copy = new Blob([await previousDayEndPhoto.arrayBuffer()], { type: previousDayEndPhoto.type || "image/jpeg" });
+  } catch (e) {
+    alert("前回の終了写真を読み込めませんでした。撮影するか、写真から選んでください。");
+    return;
+  }
+  currentPhotoStart = copy;
+  photoWrite.start = true;
   originalPhotoStart = null;
   saveOriginalStartBtn.hidden = true;
   detailDirty = true;
@@ -2134,6 +2410,7 @@ async function handlePhotoFileSelected(input) {
   const targetDate = currentDetailDate; // 縮小処理中に日付が切り替わっても混線しないよう固定
   pendingSlot = null;
   input.value = "";
+  clearPendingShot();
   if (!file || !slot) return;
 
   showPhotoProcessing(); // 処理中は画面全体をブロックし、割り込みによる保存事故を防ぐ
@@ -2157,7 +2434,7 @@ async function handlePhotoFileSelected(input) {
         } else {
           rec.photoEnd = blob;
         }
-        await putRecord(rec);
+        await putRecord(rec, { start: slot === "start", end: slot === "end" });
         await renderList();
       } catch (err) {
         console.error("photo save failed", err);
@@ -2182,6 +2459,7 @@ async function handlePhotoFileSelected(input) {
     } else {
       currentPhotoEnd = blob;
     }
+    photoWrite[slot] = true;
     detailDirty = true;
     refreshPhotoPreview(slot);
     try {
@@ -2211,6 +2489,7 @@ saveOriginalEndBtn.addEventListener("click", (ev) => {
 removePhotoStartBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
   currentPhotoStart = null;
+  photoWrite.start = true;
   originalPhotoStart = null;
   detailDirty = true;
   saveOriginalStartBtn.hidden = true;
@@ -2221,6 +2500,7 @@ removePhotoStartBtn.addEventListener("click", async (ev) => {
 removePhotoEndBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
   currentPhotoEnd = null;
+  photoWrite.end = true;
   originalPhotoEnd = null;
   detailDirty = true;
   saveOriginalEndBtn.hidden = true;
@@ -2363,4 +2643,7 @@ window.addEventListener("pagehide", () => {
   }
   loadingView.hidden = true;
   homeView.hidden = false;
+  // 端末のストレージ整理で記録や写真が自動的に消されないよう、保存の継続を求めておく（断られても支障なし）
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  await checkPendingShot();
 })();

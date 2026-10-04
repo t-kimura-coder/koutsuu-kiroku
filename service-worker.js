@@ -1,12 +1,12 @@
 // キャッシュ対象を変更したら CACHE_VERSION を上げること（APP_VERSIONと合わせなくてOK、SW側だけの独立カウンタ）
-const CACHE_VERSION = 25;
+const CACHE_VERSION = 26;
 const CACHE_NAME = `koutsuu-kiroku-v${CACHE_VERSION}`;
 
 const APP_SHELL = [
   './',
   'index.html',
-  'app.js?v=38',
-  'style.css?v=22',
+  'app.js?v=39',
+  'style.css?v=23',
   'hero-illustration.png?v=20',
   'detail-hero.png?v=27',
   'vehicle-illustration.png',
