@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 40;
+const APP_VERSION = 41;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-06", type: "feature", text: "その他設定に「スプレッドシート送信（試験中）」を追加しました。Boxへの送信は今まで通り使えます" },
   { date: "2026-10-04", type: "feature", text: "画面の色味を、あたたかいクリーム色と深い緑に変えました（ダークモードは緑がかった黒）" },
   { date: "2026-10-04", type: "feature", text: "その他設定に「写真の点検」を追加しました。「？」で見えない写真を数えて、消して撮り直せます" },
   { date: "2026-10-04", type: "fix", text: "写真が「？」になる・アプリが固まる・撮影中に落ちる不具合の対策をしました（写真の保存方法の変更、更新時に使用中は読み込み直さない、撮影中に落ちた時のお知らせ）" },
@@ -315,6 +316,9 @@ function injectIcons() {
   injectIcon("otherHelpHeadingIcon", HELP_ICON_SVG);
   injectIcon("otherDataHeadingIcon", BACKUP_EXPORT_ICON_SVG);
   injectIcon("otherShareHeadingIcon", LINK_ICON_SVG);
+  injectIcon("otherSheetHeadingIcon", BACKUP_EXPORT_ICON_SVG);
+  injectIcon("gasTestIcon", LINK_ICON_SVG);
+  injectIcon("gasSendIcon", SEND_ICON_SVG);
   injectIcon("copyAppUrlIcon", COPY_ICON_SVG);
   injectIcon("shareAppIcon", SEND_ICON_SVG);
   injectIcon("guideIcon", BOOK_ICON_SVG);
@@ -1026,6 +1030,11 @@ const exportBtn = document.getElementById("exportBtn");
 const exportHintText = document.getElementById("exportHintText");
 const copyEmailBtn = document.getElementById("copyEmailBtn");
 const boxEmailInput = document.getElementById("boxEmailInput");
+const gasUrlInput = document.getElementById("gasUrlInput");
+const gasTokenInput = document.getElementById("gasTokenInput");
+const gasTestBtn = document.getElementById("gasTestBtn");
+const gasSendBtn = document.getElementById("gasSendBtn");
+const gasStatusText = document.getElementById("gasStatusText");
 const appUrlText = document.getElementById("appUrlText");
 const copyAppUrlBtn = document.getElementById("copyAppUrlBtn");
 const shareAppUrlBtn = document.getElementById("shareAppUrlBtn");
@@ -1508,23 +1517,12 @@ function setBoxEmail(value) {
   }
 }
 
-async function exportCurrentPeriod(options = {}) {
-  const { skipConfirm = false, periodStart = currentPeriodStart, markSent = true } = options;
-  const start = periodStart;
+// Box送信(JSONファイル)とスプレッドシート送信で共通の、1期間分の送信データ
+async function buildPeriodPayload(start, name) {
   const end = periodEndFor(start);
   const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
-
-  const name = getUserName();
-  if (!name) {
-    // 自動バックアップは無言で諦める(ユーザー操作なしに割り込みアラートを出さないため)
-    if (markSent) {
-      alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
-    }
-    return;
-  }
-
   const vehicleInfo = getVehicleInfo();
-  const payload = {
+  return {
     name,
     vehicleYear: vehicleInfo.vehicleYear,
     vehicleModel: vehicleInfo.vehicleModel,
@@ -1541,6 +1539,23 @@ async function exportCurrentPeriod(options = {}) {
       end2: r.end2,
     })),
   };
+}
+
+async function exportCurrentPeriod(options = {}) {
+  const { skipConfirm = false, periodStart = currentPeriodStart, markSent = true } = options;
+  const start = periodStart;
+  const end = periodEndFor(start);
+
+  const name = getUserName();
+  if (!name) {
+    // 自動バックアップは無言で諦める(ユーザー操作なしに割り込みアラートを出さないため)
+    if (markSent) {
+      alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
+    }
+    return;
+  }
+
+  const payload = await buildPeriodPayload(start, name);
 
   if (!skipConfirm) {
     let filledDays = 0;
@@ -1824,6 +1839,170 @@ async function maybeAutoBackup() {
   await exportCurrentPeriod({ skipConfirm: true, periodStart: periodForQuickSend(new Date()), markSent: false });
 }
 
+/* ---------- スプレッドシート送信（試験） ----------
+   GAS(Google Apps Script)の受け口に、1期間分のデータを送って「走行記録」シートへ反映する。
+   合言葉はアプリのコード(公開リポジトリ)に入れず、各端末の設定(localStorage)に持つ。
+   Box送信は残してある(こちらが定着するまでの予備) */
+const GAS_URL_KEY = "koutsuu-kiroku-gas-url";
+const GAS_TOKEN_KEY = "koutsuu-kiroku-gas-token";
+const GAS_SENT_KEY = "koutsuu-kiroku-gas-sent";
+const GAS_URL_PREFIX = "https://script.google.com/macros/s/";
+
+function getLocal(key) {
+  try {
+    return localStorage.getItem(key) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function setLocal(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function loadGasFields() {
+  gasUrlInput.value = getLocal(GAS_URL_KEY);
+  gasTokenInput.value = getLocal(GAS_TOKEN_KEY);
+  updateGasStatus();
+}
+
+function setGasStatus(text) {
+  gasStatusText.textContent = text;
+}
+
+function updateGasStatus() {
+  let log = {};
+  try {
+    log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}");
+  } catch (e) {}
+  const latest = Object.entries(log).sort((a, b) => b[1].at - a[1].at)[0];
+  if (!latest) {
+    setGasStatus(getLocal(GAS_URL_KEY) && getLocal(GAS_TOKEN_KEY) ? "設定済み（まだ送っていません）" : "未設定");
+    return;
+  }
+  const d = new Date(latest[1].at);
+  setGasStatus(`前回の送信: ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}（${latest[0].slice(5).replace("-", "/")}始まりの期間）`);
+}
+
+async function gasRequest(action, extra = {}) {
+  const url = getLocal(GAS_URL_KEY);
+  const token = getLocal(GAS_TOKEN_KEY);
+  if (!url || !token) throw new Error("受け口のURLと合言葉を入れてください");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    // text/plain にすると事前確認(プリフライト)が要らず、GASが受け取れる
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token, action, appVersion: String(APP_VERSION), ...extra }),
+      redirect: "follow",
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`通信エラー(${res.status})`);
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      throw new Error("返事を読み取れません（URLが違うかもしれません）");
+    }
+    if (!data.ok) throw new Error(data.error === "unauthorized" ? "合言葉が違います" : data.error || "送信に失敗しました");
+    return data;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("時間内に返事がありませんでした");
+    if (e instanceof TypeError) throw new Error("通信できませんでした（電波やURLを確かめてください）");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 設定リンク(…/#gas=<URLと合言葉>)を開いたら、受け口の設定を入れてアドレスから消す
+let gasSetupFromLink = false;
+function applyGasSetupFromHash() {
+  const m = location.hash.match(/^#gas=([A-Za-z0-9_-]+)/);
+  if (!m) return;
+  try {
+    const b64 = m[1].replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+    const cfg = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
+    if (typeof cfg.u === "string" && cfg.u.startsWith(GAS_URL_PREFIX) && /^[A-Za-z0-9]{16,}$/.test(cfg.t || "")) {
+      setLocal(GAS_URL_KEY, cfg.u);
+      setLocal(GAS_TOKEN_KEY, cfg.t);
+      gasSetupFromLink = true;
+    }
+  } catch (e) {
+    /* 読めないリンクは無視する */
+  }
+  history.replaceState(null, "", location.pathname + location.search);
+}
+applyGasSetupFromHash();
+
+gasUrlInput.addEventListener("blur", () => {
+  setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
+  updateGasStatus();
+});
+gasTokenInput.addEventListener("blur", () => {
+  setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
+  updateGasStatus();
+});
+
+gasTestBtn.addEventListener("click", async () => {
+  setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
+  setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
+  gasTestBtn.disabled = true;
+  setGasStatus("接続を確かめています…");
+  try {
+    await gasRequest("ping");
+    setGasStatus("✓ 接続できました（合言葉も正しいです）");
+  } catch (e) {
+    setGasStatus(`× 接続できませんでした: ${e.message}`);
+  } finally {
+    gasTestBtn.disabled = false;
+  }
+});
+
+gasSendBtn.addEventListener("click", async () => {
+  const name = getUserName();
+  if (!name) {
+    alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
+    return;
+  }
+  setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
+  setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
+  const start = periodForQuickSend(new Date());
+  gasSendBtn.disabled = true;
+  try {
+    const payload = await buildPeriodPayload(start, name);
+    const filled = payload.records.filter((r) => r.start != null && r.end != null).length;
+    if (
+      !confirm(
+        `${payload.periodStart} 〜 ${payload.periodEnd} の記録（入力済み ${filled}日）を、スプレッドシートへ送ります。\n同じ日付は上書きされます。よろしいですか？`
+      )
+    ) {
+      return;
+    }
+    setGasStatus("送信中…");
+    const res = await gasRequest("submitPeriod", payload);
+    let log = {};
+    try {
+      log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}");
+    } catch (e) {}
+    log[payload.periodStart] = { at: Date.now(), added: res.added, updated: res.updated, removed: res.removed };
+    setLocal(GAS_SENT_KEY, JSON.stringify(log));
+    updateGasStatus();
+    showSavedToast(`送りました（追加${res.added}・更新${res.updated}・削除${res.removed}）`);
+  } catch (e) {
+    setGasStatus(`× 送れませんでした: ${e.message}`);
+  } finally {
+    gasSendBtn.disabled = false;
+  }
+});
+
 /* ---------- イベント ---------- */
 
 prevPeriodBtn.addEventListener("click", () => {
@@ -1901,6 +2080,7 @@ function loadSettingsFields() {
   themeSelect.value = getTheme();
   boxEmailInput.value = getBoxEmail();
   updateEmailHint();
+  loadGasFields();
   const vehicleInfo = getVehicleInfo();
   populateVehicleYearSelect(vehicleInfo.vehicleYear);
   vehicleModelInput.value = vehicleInfo.vehicleModel;
@@ -2646,5 +2826,6 @@ window.addEventListener("pagehide", () => {
   homeView.hidden = false;
   // 端末のストレージ整理で記録や写真が自動的に消されないよう、保存の継続を求めておく（断られても支障なし）
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  if (gasSetupFromLink) showSavedToast("スプレッドシート送信の設定を入れました");
   await checkPendingShot();
 })();

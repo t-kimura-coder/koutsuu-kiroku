@@ -260,6 +260,24 @@
       </div>
 
       <div class="settingsSectionHeading">
+        <span class="fieldIcon" id="otherSheetHeadingIcon"></span>
+        <span>スプレッドシート送信（試験中）</span>
+      </div>
+      <label class="field">
+        <span>受け口のURL</span>
+        <input type="url" id="gasUrlInput" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="https://script.google.com/macros/s/…/exec">
+      </label>
+      <label class="field">
+        <span>合言葉</span>
+        <input type="password" id="gasTokenInput" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="管理者から受け取った合言葉">
+      </label>
+      <div class="field">
+        <button id="gasTestBtn" class="ghostBtn"><span class="inlineIcon" id="gasTestIcon"></span>接続テスト</button>
+        <button id="gasSendBtn" class="ghostBtn"><span class="inlineIcon" id="gasSendIcon"></span>今月分をスプレッドシートへ送る</button>
+        <div id="gasStatusText" class="exportHint"></div>
+      </div>
+
+      <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherShareHeadingIcon"></span>
         <span>アプリを共有</span>
       </div>
@@ -484,6 +502,6 @@
   </div>
 </div>
 
-<script src="app.js?v=40"></script>
+<script src="app.js?v=41"></script>
 </body>
 </html>
