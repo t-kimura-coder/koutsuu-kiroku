@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -276,10 +276,15 @@
         <span>合言葉</span>
         <input type="password" id="gasTokenInput" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="管理者から受け取った合言葉">
       </label>
+      <label class="field">
+        <span>会社のメールアドレス（あなた専用のシートを共有する先）</span>
+        <input type="email" id="gasEmailInput" inputmode="email" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="例）xxxx@kk35.jp">
+      </label>
       <div class="field">
         <button id="gasTestBtn" class="ghostBtn"><span class="inlineIcon" id="gasTestIcon"></span>接続テスト</button>
         <button id="gasSendBtn" class="ghostBtn"><span class="inlineIcon" id="gasSendIcon"></span>今月分をスプレッドシートへ送る</button>
         <div id="gasStatusText" class="exportHint"></div>
+        <a id="gasPersonalLink" class="gasPersonalLink" href="#" target="_blank" rel="noopener" hidden>あなた専用のスプレッドシートを開く（内容の確認・PDF印刷）</a>
       </div>
 
       <div class="settingsSectionHeading">
@@ -507,6 +512,6 @@
   </div>
 </div>
 
-<script src="app.js?v=42"></script>
+<script src="app.js?v=43"></script>
 </body>
 </html>

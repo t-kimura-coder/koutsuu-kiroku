@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 42;
+const APP_VERSION = 43;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-07", type: "feature", text: "スプレッドシートへ送ると、あなた専用のシートができます。内容を確認して、そこからPDFにして印刷できます（その他設定でメールアドレスを入れてください）" },
   { date: "2026-10-06", type: "fix", text: "ホーム画面に追加したアプリでも、設定リンクを貼り付けて送信の設定を入れられるようにしました" },
   { date: "2026-10-06", type: "feature", text: "その他設定に「スプレッドシート送信（試験中）」を追加しました。Boxへの送信は今まで通り使えます" },
   { date: "2026-10-04", type: "feature", text: "画面の色味を、あたたかいクリーム色と深い緑に変えました（ダークモードは緑がかった黒）" },
@@ -1034,6 +1035,8 @@ const copyEmailBtn = document.getElementById("copyEmailBtn");
 const boxEmailInput = document.getElementById("boxEmailInput");
 const gasLinkInput = document.getElementById("gasLinkInput");
 const gasLinkApplyBtn = document.getElementById("gasLinkApplyBtn");
+const gasEmailInput = document.getElementById("gasEmailInput");
+const gasPersonalLink = document.getElementById("gasPersonalLink");
 const gasUrlInput = document.getElementById("gasUrlInput");
 const gasTokenInput = document.getElementById("gasTokenInput");
 const gasTestBtn = document.getElementById("gasTestBtn");
@@ -1850,6 +1853,8 @@ async function maybeAutoBackup() {
 const GAS_URL_KEY = "koutsuu-kiroku-gas-url";
 const GAS_TOKEN_KEY = "koutsuu-kiroku-gas-token";
 const GAS_SENT_KEY = "koutsuu-kiroku-gas-sent";
+const GAS_EMAIL_KEY = "koutsuu-kiroku-gas-email";
+const GAS_PERSONAL_URL_KEY = "koutsuu-kiroku-gas-personal-url";
 const GAS_URL_PREFIX = "https://script.google.com/macros/s/";
 
 function getLocal(key) {
@@ -1871,7 +1876,16 @@ function setLocal(key, value) {
 function loadGasFields() {
   gasUrlInput.value = getLocal(GAS_URL_KEY);
   gasTokenInput.value = getLocal(GAS_TOKEN_KEY);
+  gasEmailInput.value = getLocal(GAS_EMAIL_KEY);
   updateGasStatus();
+  updateGasPersonalLink();
+}
+
+// 送信すると作られる「あなた専用のスプレッドシート」へのリンク
+function updateGasPersonalLink() {
+  const url = getLocal(GAS_PERSONAL_URL_KEY);
+  gasPersonalLink.hidden = !url;
+  if (url) gasPersonalLink.href = url;
 }
 
 function setGasStatus(text) {
@@ -1980,6 +1994,9 @@ gasTokenInput.addEventListener("blur", () => {
   setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
   updateGasStatus();
 });
+gasEmailInput.addEventListener("blur", () => {
+  setLocal(GAS_EMAIL_KEY, gasEmailInput.value.trim());
+});
 
 gasTestBtn.addEventListener("click", async () => {
   setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
@@ -2016,8 +2033,10 @@ gasSendBtn.addEventListener("click", async () => {
     ) {
       return;
     }
-    setGasStatus("送信中…");
-    const res = await gasRequest("submitPeriod", payload);
+    setGasStatus("送信中…（初回は専用シートを作るため、少し時間がかかります）");
+    const email = gasEmailInput.value.trim();
+    setLocal(GAS_EMAIL_KEY, email);
+    const res = await gasRequest("submitPeriod", { ...payload, email });
     let log = {};
     try {
       log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}");
@@ -2025,6 +2044,14 @@ gasSendBtn.addEventListener("click", async () => {
     log[payload.periodStart] = { at: Date.now(), added: res.added, updated: res.updated, removed: res.removed };
     setLocal(GAS_SENT_KEY, JSON.stringify(log));
     updateGasStatus();
+    if (res.personal && res.personal.url) {
+      setLocal(GAS_PERSONAL_URL_KEY, res.personal.url);
+      updateGasPersonalLink();
+    } else if (res.personal && res.personal.skipped) {
+      setGasStatus(`${gasStatusText.textContent}\nメールアドレス（@kk35.jp）を入れると、あなた専用のシートが作られます`);
+    } else if (res.personal && res.personal.error) {
+      setGasStatus(`${gasStatusText.textContent}\n専用シートの更新に失敗しました: ${res.personal.error}`);
+    }
     showSavedToast(`送りました（追加${res.added}・更新${res.updated}・削除${res.removed}）`);
   } catch (e) {
     setGasStatus(`× 送れませんでした: ${e.message}`);

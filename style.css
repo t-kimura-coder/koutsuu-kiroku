@@ -1112,6 +1112,28 @@ html, body {
   white-space: pre-line;
 }
 
+#gasStatusText {
+  white-space: pre-line;
+}
+
+.gasPersonalLink {
+  display: block;
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  text-decoration: none;
+  background: var(--header-bg);
+}
+
+.gasPersonalLink[hidden] {
+  display: none;
+}
+
 .field {
   display: flex;
   flex-direction: column;
