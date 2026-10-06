@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 43;
+const APP_VERSION = 44;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-07", type: "fix", text: "バグ点検の指摘を修正しました（写真の「あり」表示が消える可能性、保存に失敗したときの画面の動き、撮影の取り消し後の誤った案内など）" },
   { date: "2026-10-07", type: "feature", text: "スプレッドシートへ送ると、あなた専用のシートができます。内容を確認して、そこからPDFにして印刷できます（その他設定でメールアドレスを入れてください）" },
   { date: "2026-10-06", type: "fix", text: "ホーム画面に追加したアプリでも、設定リンクを貼り付けて送信の設定を入れられるようにしました" },
   { date: "2026-10-06", type: "feature", text: "その他設定に「スプレッドシート送信（試験中）」を追加しました。Boxへの送信は今まで通り使えます" },
@@ -392,6 +393,11 @@ function openDB() {
       resolve(db);
     };
     req.onerror = () => reject(req.error);
+    // 古い版を開いたままの別タブ/別画面が残っていると、更新が進まず読み込み画面のまま固まる
+    req.onblocked = () => {
+      const t = document.getElementById("loadingText");
+      if (t) t.textContent = "他に開いている走行距離メモのタブや画面を閉じてから、もう一度開いてください。";
+    };
   });
 }
 
@@ -473,24 +479,31 @@ async function getAllRecords() {
 // writeImages.start / .end が true の時だけで、それ以外は印(hasPhotoStart / hasPhotoEnd)だけを更新する
 async function putRecord(record, writeImages = {}) {
   const { photoStart, photoEnd, ...meta } = record;
-  meta.hasPhotoStart = !!photoStart;
-  meta.hasPhotoEnd = !!photoEnd;
   const db = await dbPromise;
   return new Promise((resolve, reject) => {
     const tx = db.transaction([STORE, IMAGE_STORE], "readwrite");
-    tx.objectStore(STORE).put(meta);
+    const recs = tx.objectStore(STORE);
     const imgs = tx.objectStore(IMAGE_STORE);
-    for (const [slot, blob] of [
-      ["start", photoStart],
-      ["end", photoEnd],
-    ]) {
-      if (!writeImages[slot]) continue;
-      if (blob) imgs.put({ id: imageKey(record.date, slot), blob });
-      else imgs.delete(imageKey(record.date, slot));
-    }
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error || new Error("transaction aborted"));
+    // 画像を書き換えないスロットの「写真あり」の印は、今保存されている値のまま残す。
+    // （画像が一時的に読めずに photoStart が null で渡されても、印だけ消えて写真が孤児になるのを防ぐ）
+    const cur = recs.get(record.date);
+    cur.onsuccess = () => {
+      const old = cur.result || {};
+      meta.hasPhotoStart = writeImages.start ? !!photoStart : !!old.hasPhotoStart;
+      meta.hasPhotoEnd = writeImages.end ? !!photoEnd : !!old.hasPhotoEnd;
+      recs.put(meta);
+      for (const [slot, blob] of [
+        ["start", photoStart],
+        ["end", photoEnd],
+      ]) {
+        if (!writeImages[slot]) continue;
+        if (blob) imgs.put({ id: imageKey(record.date, slot), blob });
+        else imgs.delete(imageKey(record.date, slot));
+      }
+    };
   });
 }
 
@@ -728,7 +741,7 @@ function applyCommuteOnlyState() {
 }
 
 function escapeHtml(s) {
-  return s
+  return String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -837,9 +850,10 @@ function populateVehicleYearSelect(currentValue) {
   if (currentValue && !options.includes(currentValue)) {
     options.unshift(currentValue);
   }
+  // バックアップから復元した値が入ることがあるので、HTMLとして解釈されないようにする
   vehicleYearInput.innerHTML =
     '<option value="">未選択</option>' +
-    options.map((v) => `<option value="${v}">${v}</option>`).join("");
+    options.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
   vehicleYearInput.value = currentValue || "";
 }
 
@@ -1230,7 +1244,7 @@ async function renderList() {
     const startText = rec && rec.start != null ? rec.start : "－";
     const endText = rec && rec.end != null ? rec.end : "－";
     const seg1 = rec && rec.start != null && rec.end != null ? rec.end - rec.start : null;
-    let distHtml = `<div class="distRow"><span class="distNum">${startText}</span> → <span class="distNum">${endText}</span></div>`;
+    let distHtml = `<div class="distRow"><span class="distNum">${escapeHtml(startText)}</span> → <span class="distNum">${escapeHtml(endText)}</span></div>`;
     if (seg1 != null) {
       distHtml += `<div class="distKm">＝ ${seg1.toFixed(1)} km</div>`;
     }
@@ -1865,11 +1879,13 @@ function getLocal(key) {
   }
 }
 
+// 保存できたかを true / false で返す（保存できないのに「設定を入れました」と表示しないため）
 function setLocal(key, value) {
   try {
     localStorage.setItem(key, value);
+    return true;
   } catch (e) {
-    /* ignore */
+    return false;
   }
 }
 
@@ -1882,10 +1898,12 @@ function loadGasFields() {
 }
 
 // 送信すると作られる「あなた専用のスプレッドシート」へのリンク
+const GAS_PERSONAL_URL_PREFIX = "https://docs.google.com/";
 function updateGasPersonalLink() {
   const url = getLocal(GAS_PERSONAL_URL_KEY);
-  gasPersonalLink.hidden = !url;
-  if (url) gasPersonalLink.href = url;
+  const ok = url.startsWith(GAS_PERSONAL_URL_PREFIX); // 想定外のアドレス(javascript: など)はリンクにしない
+  gasPersonalLink.hidden = !ok;
+  if (ok) gasPersonalLink.href = url;
 }
 
 function setGasStatus(text) {
@@ -1897,7 +1915,9 @@ function updateGasStatus() {
   try {
     log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}");
   } catch (e) {}
-  const latest = Object.entries(log).sort((a, b) => b[1].at - a[1].at)[0];
+  // 壊れた記録があっても、設定画面全体が止まらないようにする
+  const entries = Object.entries(log || {}).filter(([, v]) => v && Number.isFinite(v.at));
+  const latest = entries.sort((a, b) => b[1].at - a[1].at)[0];
   if (!latest) {
     setGasStatus(getLocal(GAS_URL_KEY) && getLocal(GAS_TOKEN_KEY) ? "設定済み（まだ送っていません）" : "未設定");
     return;
@@ -1964,9 +1984,7 @@ function applyGasSetupFromHash() {
   if (!/^#gas=/.test(location.hash)) return;
   const cfg = parseGasSetup(location.hash);
   if (cfg) {
-    setLocal(GAS_URL_KEY, cfg.url);
-    setLocal(GAS_TOKEN_KEY, cfg.token);
-    gasSetupFromLink = true;
+    gasSetupFromLink = setLocal(GAS_URL_KEY, cfg.url) && setLocal(GAS_TOKEN_KEY, cfg.token);
   }
   history.replaceState(null, "", location.pathname + location.search);
 }
@@ -1979,8 +1997,10 @@ gasLinkApplyBtn.addEventListener("click", () => {
     setGasStatus("× リンクを読み取れませんでした。受け取ったリンクを全部コピーして貼り付けてください");
     return;
   }
-  setLocal(GAS_URL_KEY, cfg.url);
-  setLocal(GAS_TOKEN_KEY, cfg.token);
+  if (!(setLocal(GAS_URL_KEY, cfg.url) && setLocal(GAS_TOKEN_KEY, cfg.token))) {
+    setGasStatus("× この端末では設定を保存できませんでした（プライベートブラウズ等の可能性があります）");
+    return;
+  }
   gasLinkInput.value = "";
   loadGasFields();
   setGasStatus("✓ 設定を入れました。「接続テスト」で確かめてください");
@@ -2044,13 +2064,18 @@ gasSendBtn.addEventListener("click", async () => {
     log[payload.periodStart] = { at: Date.now(), added: res.added, updated: res.updated, removed: res.removed };
     setLocal(GAS_SENT_KEY, JSON.stringify(log));
     updateGasStatus();
-    if (res.personal && res.personal.url) {
+    if (res.personal && typeof res.personal.url === "string" && res.personal.url.startsWith(GAS_PERSONAL_URL_PREFIX)) {
       setLocal(GAS_PERSONAL_URL_KEY, res.personal.url);
       updateGasPersonalLink();
+      if (res.personal.error) setGasStatus(`${gasStatusText.textContent}\n${res.personal.error}`);
     } else if (res.personal && res.personal.skipped) {
       setGasStatus(`${gasStatusText.textContent}\nメールアドレス（@kk35.jp）を入れると、あなた専用のシートが作られます`);
     } else if (res.personal && res.personal.error) {
       setGasStatus(`${gasStatusText.textContent}\n専用シートの更新に失敗しました: ${res.personal.error}`);
+    }
+    if (Array.isArray(res.incompleteDays) && res.incompleteDays.length) {
+      const days = res.incompleteDays.map((d) => String(d).slice(5).replace("-", "/")).join("、");
+      setGasStatus(`${gasStatusText.textContent}\n※ 始針か終針が空の日は、専用シートに入りません: ${days}`);
     }
     showSavedToast(`送りました（追加${res.added}・更新${res.updated}・削除${res.removed}）`);
   } catch (e) {
@@ -2203,16 +2228,17 @@ async function showSection(target) {
 // 今後の機能追加で発生しても未保存の編集が失われたり画面が二重表示されたりしないようにする防御策
 async function flushDetailIfOpen() {
   if (!detailView.hidden) {
-    await saveCurrentDetail({ skipBreakSelfHeal: false });
+    if (!(await saveDetailWithErrorAlert({ skipBreakSelfHeal: false }))) return false; // 保存できていないので、移動しない
     currentDetailDate = null;
     detailView.hidden = true;
   }
+  return true;
 }
 
 let announceReturnTarget = "home"; // "home" | "other" — お知らせを閉じたときの戻り先
 
 async function openAnnounceView(from) {
-  await flushDetailIfOpen();
+  if (!(await flushDetailIfOpen())) return;
   announceReturnTarget = from;
   announceBackLabel.textContent = from === "other" ? "その他" : "ホーム";
   renderAnnounceList();
@@ -2231,7 +2257,7 @@ function closeAnnounceView() {
 let guideReturnTarget = "other"; // "home" | "other" — ガイドを閉じたときの戻り先
 
 async function openGuideView(from) {
-  await flushDetailIfOpen();
+  if (!(await flushDetailIfOpen())) return;
   guideReturnTarget = from;
   guideBackLabel.textContent = from === "home" ? "ホーム" : "その他";
   homeView.hidden = true;
@@ -2285,6 +2311,7 @@ startTodayBtn.addEventListener("click", async () => {
   currentPeriodStart = periodStartFor(new Date());
   homeView.hidden = true;
   await openDetail(fmtKey(new Date()));
+  if (detailView.hidden) homeView.hidden = false; // 開けなかったときに、画面が真っ白のままにならないようにする
 });
 
 homeExportBtn.addEventListener("click", async () => {
@@ -2528,7 +2555,7 @@ saveOriginalCheckbox.addEventListener("change", () => {
 detailHomeBtn.addEventListener("click", closeDetailToHome);
 detailListBtn.addEventListener("click", closeDetailToList);
 detailSettingsBtn.addEventListener("click", async () => {
-  await saveCurrentDetail({ skipBreakSelfHeal: false });
+  if (!(await saveDetailWithErrorAlert({ skipBreakSelfHeal: false }))) return; // 保存できていない可能性があるので、移動しない
   currentDetailDate = null;
   detailView.hidden = true;
   await showSection("vehicle");
@@ -2576,30 +2603,38 @@ function clearPendingShot() {
     sessionStorage.removeItem(PENDING_SHOT_KEY);
   } catch (e) {}
 }
-function hasPendingShot() {
+// 撮影を始めてから3分以内の控えだけを「撮影中」とみなす（キャンセルで消えなかった古い控えが、
+// アプリ更新を止めたり、誤ったお知らせを出したりしないように）
+const PENDING_SHOT_MAX_MS = 3 * 60 * 1000;
+function readPendingShot() {
   try {
-    return !!sessionStorage.getItem(PENDING_SHOT_KEY);
+    const p = JSON.parse(sessionStorage.getItem(PENDING_SHOT_KEY) || "null");
+    return p && p.date && Date.now() - p.at <= PENDING_SHOT_MAX_MS ? p : null;
   } catch (e) {
-    return false;
+    return null;
   }
 }
-// カメラを閉じた(撮らずにキャンセルした)時は控えを消す。撮った時は change の処理で消える
+function hasPendingShot() {
+  return !!readPendingShot();
+}
+// カメラを閉じた(撮らずにキャンセルした)時は控えを消す。撮った時は change の処理で消える。
+// iOSでは、選択をキャンセルしても visibilitychange が来ないことがあるので、cancel イベントでも消す
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
   setTimeout(() => {
     if (photoProcessingOverlay.hidden) clearPendingShot();
   }, 4000);
 });
+photoInput.addEventListener("cancel", clearPendingShot);
+photoInputLibrary.addEventListener("cancel", clearPendingShot);
 async function checkPendingShot() {
-  let p = null;
-  try {
-    p = JSON.parse(sessionStorage.getItem(PENDING_SHOT_KEY) || "null");
-  } catch (e) {}
+  const p = readPendingShot();
   clearPendingShot();
-  if (!p || !p.date || Date.now() - p.at > 15 * 60 * 1000) return;
+  if (!p) return;
   alert("撮影中にアプリが読み込み直されたため、写真を保存できませんでした。\nお手数ですが、もう一度撮影してください。");
   homeView.hidden = true;
   await openDetail(p.date);
+  if (detailView.hidden) homeView.hidden = false; // 開けなかったときに、画面が真っ白のままにならないようにする
 }
 
 photoChoiceCameraBtn.addEventListener("click", () => {
@@ -2618,6 +2653,7 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
   closePhotoChoiceSheet();
   if (slot !== "start" || !previousDayEndPhoto) return;
   // 読み出した写真をそのまま別の日に保存し直すと壊れることがあるので、中身を読み直した新しいデータにして使う
+  const targetDate = currentDetailDate;
   let copy;
   try {
     copy = new Blob([await previousDayEndPhoto.arrayBuffer()], { type: previousDayEndPhoto.type || "image/jpeg" });
@@ -2625,6 +2661,7 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
     alert("前回の終了写真を読み込めませんでした。撮影するか、写真から選んでください。");
     return;
   }
+  if (currentDetailDate !== targetDate) return; // 読み込んでいる間に別の日が開かれたら、写真を入れない
   currentPhotoStart = copy;
   photoWrite.start = true;
   originalPhotoStart = null;
@@ -2848,14 +2885,12 @@ end2Input.addEventListener("blur", saveDetailAndToast);
 
 // アプリがバックグラウンドに回る/閉じられるとblurが発火しないことがあるため、
 // フォーカスを外さずに離脱しても入力中の内容が消えないようにする保険
+// （裏に回る時は、失敗してもアラートを出せないので記録だけ残す。未処理の例外にもしない）
+const saveQuietly = () => saveCurrentDetail().catch((err) => console.error("background save failed", err));
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") {
-    saveCurrentDetail();
-  }
+  if (document.visibilityState === "hidden") saveQuietly();
 });
-window.addEventListener("pagehide", () => {
-  saveCurrentDetail();
-});
+window.addEventListener("pagehide", saveQuietly);
 
 /* ---------- 初期化 ---------- */
 
