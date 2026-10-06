@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 41;
+const APP_VERSION = 42;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-06", type: "fix", text: "ホーム画面に追加したアプリでも、設定リンクを貼り付けて送信の設定を入れられるようにしました" },
   { date: "2026-10-06", type: "feature", text: "その他設定に「スプレッドシート送信（試験中）」を追加しました。Boxへの送信は今まで通り使えます" },
   { date: "2026-10-04", type: "feature", text: "画面の色味を、あたたかいクリーム色と深い緑に変えました（ダークモードは緑がかった黒）" },
   { date: "2026-10-04", type: "feature", text: "その他設定に「写真の点検」を追加しました。「？」で見えない写真を数えて、消して撮り直せます" },
@@ -317,6 +318,7 @@ function injectIcons() {
   injectIcon("otherDataHeadingIcon", BACKUP_EXPORT_ICON_SVG);
   injectIcon("otherShareHeadingIcon", LINK_ICON_SVG);
   injectIcon("otherSheetHeadingIcon", BACKUP_EXPORT_ICON_SVG);
+  injectIcon("gasLinkIcon", LINK_ICON_SVG);
   injectIcon("gasTestIcon", LINK_ICON_SVG);
   injectIcon("gasSendIcon", SEND_ICON_SVG);
   injectIcon("copyAppUrlIcon", COPY_ICON_SVG);
@@ -1030,6 +1032,8 @@ const exportBtn = document.getElementById("exportBtn");
 const exportHintText = document.getElementById("exportHintText");
 const copyEmailBtn = document.getElementById("copyEmailBtn");
 const boxEmailInput = document.getElementById("boxEmailInput");
+const gasLinkInput = document.getElementById("gasLinkInput");
+const gasLinkApplyBtn = document.getElementById("gasLinkApplyBtn");
 const gasUrlInput = document.getElementById("gasUrlInput");
 const gasTokenInput = document.getElementById("gasTokenInput");
 const gasTestBtn = document.getElementById("gasTestBtn");
@@ -1923,24 +1927,50 @@ async function gasRequest(action, extra = {}) {
 
 // 設定リンク(…/#gas=<URLと合言葉>)を開いたら、受け口の設定を入れてアドレスから消す
 let gasSetupFromLink = false;
-function applyGasSetupFromHash() {
-  const m = location.hash.match(/^#gas=([A-Za-z0-9_-]+)/);
-  if (!m) return;
+
+// 設定リンク全体(https://…/#gas=…)・「#gas=…」・中身だけ、のどれでも読めるようにする
+function parseGasSetup(text) {
+  const t = String(text || "").trim();
+  const m = t.match(/gas=([A-Za-z0-9_-]+)/) || t.match(/^([A-Za-z0-9_-]{40,})$/);
+  if (!m) return null;
   try {
     const b64 = m[1].replace(/-/g, "+").replace(/_/g, "/");
     const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
     const cfg = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
     if (typeof cfg.u === "string" && cfg.u.startsWith(GAS_URL_PREFIX) && /^[A-Za-z0-9]{16,}$/.test(cfg.t || "")) {
-      setLocal(GAS_URL_KEY, cfg.u);
-      setLocal(GAS_TOKEN_KEY, cfg.t);
-      gasSetupFromLink = true;
+      return { url: cfg.u, token: cfg.t };
     }
   } catch (e) {
     /* 読めないリンクは無視する */
   }
+  return null;
+}
+
+function applyGasSetupFromHash() {
+  if (!/^#gas=/.test(location.hash)) return;
+  const cfg = parseGasSetup(location.hash);
+  if (cfg) {
+    setLocal(GAS_URL_KEY, cfg.url);
+    setLocal(GAS_TOKEN_KEY, cfg.token);
+    gasSetupFromLink = true;
+  }
   history.replaceState(null, "", location.pathname + location.search);
 }
 applyGasSetupFromHash();
+
+// iPhoneのホーム画面アプリはSafariと保存領域が別で、リンクを開いても設定が入らないため、貼り付けでも入れられるようにする
+gasLinkApplyBtn.addEventListener("click", () => {
+  const cfg = parseGasSetup(gasLinkInput.value);
+  if (!cfg) {
+    setGasStatus("× リンクを読み取れませんでした。受け取ったリンクを全部コピーして貼り付けてください");
+    return;
+  }
+  setLocal(GAS_URL_KEY, cfg.url);
+  setLocal(GAS_TOKEN_KEY, cfg.token);
+  gasLinkInput.value = "";
+  loadGasFields();
+  setGasStatus("✓ 設定を入れました。「接続テスト」で確かめてください");
+});
 
 gasUrlInput.addEventListener("blur", () => {
   setLocal(GAS_URL_KEY, gasUrlInput.value.trim());

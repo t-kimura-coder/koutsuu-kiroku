@@ -263,6 +263,11 @@
         <span class="fieldIcon" id="otherSheetHeadingIcon"></span>
         <span>スプレッドシート送信（試験中）</span>
       </div>
+      <div class="field">
+        <span>設定リンクの貼り付け（ホーム画面のアプリはこちら）</span>
+        <input type="text" id="gasLinkInput" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="受け取った設定リンクを貼り付け">
+        <button id="gasLinkApplyBtn" class="ghostBtn"><span class="inlineIcon" id="gasLinkIcon"></span>リンクから設定を入れる</button>
+      </div>
       <label class="field">
         <span>受け口のURL</span>
         <input type="url" id="gasUrlInput" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="https://script.google.com/macros/s/…/exec">
@@ -502,6 +507,6 @@
   </div>
 </div>
 
-<script src="app.js?v=41"></script>
+<script src="app.js?v=42"></script>
 </body>
 </html>
