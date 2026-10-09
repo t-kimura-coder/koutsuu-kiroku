@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 44;
+const APP_VERSION = 45;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -2068,6 +2068,8 @@ gasSendBtn.addEventListener("click", async () => {
       setLocal(GAS_PERSONAL_URL_KEY, res.personal.url);
       updateGasPersonalLink();
       if (res.personal.error) setGasStatus(`${gasStatusText.textContent}\n${res.personal.error}`);
+    } else if (res.personal && res.personal.pending) {
+      setGasStatus(`${gasStatusText.textContent}\n${res.personal.pending}`);
     } else if (res.personal && res.personal.skipped) {
       setGasStatus(`${gasStatusText.textContent}\nメールアドレス（@kk35.jp）を入れると、あなた専用のシートが作られます`);
     } else if (res.personal && res.personal.error) {
