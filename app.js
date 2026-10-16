@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 45;
+const APP_VERSION = 46;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-16", type: "fix", text: "スプレッドシート送信で、送る期間を選べるようにしました（締めの直後に、前の期間の分を送れます）" },
   { date: "2026-10-07", type: "fix", text: "バグ点検の指摘を修正しました（写真の「あり」表示が消える可能性、保存に失敗したときの画面の動き、撮影の取り消し後の誤った案内など）" },
   { date: "2026-10-07", type: "feature", text: "スプレッドシートへ送ると、あなた専用のシートができます。内容を確認して、そこからPDFにして印刷できます（その他設定でメールアドレスを入れてください）" },
   { date: "2026-10-06", type: "fix", text: "ホーム画面に追加したアプリでも、設定リンクを貼り付けて送信の設定を入れられるようにしました" },
@@ -1049,6 +1050,7 @@ const copyEmailBtn = document.getElementById("copyEmailBtn");
 const boxEmailInput = document.getElementById("boxEmailInput");
 const gasLinkInput = document.getElementById("gasLinkInput");
 const gasLinkApplyBtn = document.getElementById("gasLinkApplyBtn");
+const gasPeriodSelect = document.getElementById("gasPeriodSelect");
 const gasEmailInput = document.getElementById("gasEmailInput");
 const gasPersonalLink = document.getElementById("gasPersonalLink");
 const gasUrlInput = document.getElementById("gasUrlInput");
@@ -1893,8 +1895,29 @@ function loadGasFields() {
   gasUrlInput.value = getLocal(GAS_URL_KEY);
   gasTokenInput.value = getLocal(GAS_TOKEN_KEY);
   gasEmailInput.value = getLocal(GAS_EMAIL_KEY);
+  populateGasPeriodSelect();
   updateGasStatus();
   updateGasPersonalLink();
+}
+
+// 送る期間の選択肢（今の期間・前の期間・その前）。締めの直後(16〜25日)で、前の期間をまだ送っていなければ、前の期間を初期選択にする
+function populateGasPeriodSelect() {
+  const today = new Date();
+  const cur = periodStartFor(today);
+  const periods = [cur, shiftPeriod(cur, -1), shiftPeriod(cur, -2)];
+  const labels = ["今の期間", "前の期間", "その前の期間"];
+  let log = {};
+  try {
+    log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}") || {};
+  } catch (e) {}
+  const keepValue = gasPeriodSelect.value;
+  gasPeriodSelect.innerHTML = periods
+    .map((p, i) => `<option value="${fmtKey(p)}">${labels[i]}（${p.getMonth() + 1}/${p.getDate()}〜${periodEndFor(p).getMonth() + 1}/${periodEndFor(p).getDate()}）</option>`)
+    .join("");
+  const prevKey = fmtKey(periods[1]);
+  const d = today.getDate();
+  const defaultKey = !log[prevKey] && d >= CUTOFF_DAY && d <= 25 ? prevKey : fmtKey(cur);
+  gasPeriodSelect.value = keepValue && periods.some((p) => fmtKey(p) === keepValue) ? keepValue : defaultKey;
 }
 
 // 送信すると作られる「あなた専用のスプレッドシート」へのリンク
@@ -2041,7 +2064,8 @@ gasSendBtn.addEventListener("click", async () => {
   }
   setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
   setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
-  const start = periodForQuickSend(new Date());
+  const [py, pm, pd] = gasPeriodSelect.value.split("-").map(Number);
+  const start = new Date(py, pm - 1, pd); // 選んだ期間の開始日（16日）
   gasSendBtn.disabled = true;
   try {
     const payload = await buildPeriodPayload(start, name);

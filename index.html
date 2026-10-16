@@ -280,9 +280,13 @@
         <span>会社のメールアドレス（あなた専用のシートを共有する先）</span>
         <input type="email" id="gasEmailInput" inputmode="email" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="例）xxxx@kk35.jp">
       </label>
+      <label class="field">
+        <span>送る期間（締めの直後は「前の期間」）</span>
+        <select id="gasPeriodSelect" class="fieldSelectCompact"></select>
+      </label>
       <div class="field">
         <button id="gasTestBtn" class="ghostBtn"><span class="inlineIcon" id="gasTestIcon"></span>接続テスト</button>
-        <button id="gasSendBtn" class="ghostBtn"><span class="inlineIcon" id="gasSendIcon"></span>今月分をスプレッドシートへ送る</button>
+        <button id="gasSendBtn" class="ghostBtn"><span class="inlineIcon" id="gasSendIcon"></span>選んだ期間をスプレッドシートへ送る</button>
         <div id="gasStatusText" class="exportHint"></div>
         <a id="gasPersonalLink" class="gasPersonalLink" href="#" target="_blank" rel="noopener" hidden>あなた専用のスプレッドシートを開く（内容の確認・PDF印刷）</a>
       </div>
@@ -512,6 +516,6 @@
   </div>
 </div>
 
-<script src="app.js?v=45"></script>
+<script src="app.js?v=46"></script>
 </body>
 </html>
