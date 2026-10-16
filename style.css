@@ -264,6 +264,13 @@ html, body {
   color: var(--text);
 }
 
+.homeStatSub {
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--sub);
+  white-space: nowrap;
+}
+
 .homeStatValueSmall {
   font-size: 13px;
   white-space: nowrap;

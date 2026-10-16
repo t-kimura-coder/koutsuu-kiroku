@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 46;
+const APP_VERSION = 47;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-16", type: "feature", text: "ホーム画面の「今月の走行距離」の下に、前月の合計を表示しました" },
   { date: "2026-10-16", type: "fix", text: "スプレッドシート送信で、送る期間を選べるようにしました（締めの直後に、前の期間の分を送れます）" },
   { date: "2026-10-07", type: "fix", text: "バグ点検の指摘を修正しました（写真の「あり」表示が消える可能性、保存に失敗したときの画面の動き、撮影の取り消し後の誤った案内など）" },
   { date: "2026-10-07", type: "feature", text: "スプレッドシートへ送ると、あなた専用のシートができます。内容を確認して、そこからPDFにして印刷できます（その他設定でメールアドレスを入れてください）" },
@@ -1004,6 +1005,7 @@ const goToListBtn = document.getElementById("goToListBtn");
 const homeFromListBtn = document.getElementById("homeFromListBtn");
 const homeStatToday = document.getElementById("homeStatToday");
 const homeStatMonth = document.getElementById("homeStatMonth");
+const homeStatPrev = document.getElementById("homeStatPrev");
 const homeVehicleBtn = document.getElementById("homeVehicleBtn");
 const homeVehicleSummary = document.getElementById("homeVehicleSummary");
 const startTodayBtn = document.getElementById("startTodayBtn");
@@ -1148,6 +1150,22 @@ async function renderHome() {
     if (t != null) monthTotal += t;
   }
   homeStatMonth.textContent = `${monthTotal.toFixed(1)} km`;
+
+  // 月（締め期間）が替わった直後でも、前の期間の合計を確認できるようにする
+  const prevStart = shiftPeriod(periodStart, -1);
+  const prevEnd = periodEndFor(prevStart);
+  const prevRecords = await getRecordsInRange(fmtKey(prevStart), fmtKey(prevEnd));
+  let prevTotal = 0;
+  let prevAny = false;
+  for (const r of prevRecords) {
+    const t = totalDistance(r);
+    if (t != null) {
+      prevTotal += t;
+      prevAny = true;
+    }
+  }
+  homeStatPrev.textContent = prevAny ? `前月 ${prevTotal.toFixed(1)} km` : "前月 - km";
+  homeStatPrev.title = `${prevStart.getMonth() + 1}/${prevStart.getDate()}〜${prevEnd.getMonth() + 1}/${prevEnd.getDate()} の合計`;
 
   const vehicleInfo = getVehicleInfo();
   homeVehicleSummary.textContent = vehicleInfo.vehicleModel
