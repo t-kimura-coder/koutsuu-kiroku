@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 47;
+const APP_VERSION = 48;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -204,6 +204,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-22", type: "feature", text: "スプレッドシート送信を設定している端末では、「送信」ボタンで共有シート（Box）を出さず、そのままスプレッドシートへ送るようにしました。Box用は設定の「Box用ファイルを共有（予備）」から" },
   { date: "2026-10-16", type: "feature", text: "ホーム画面の「今月の走行距離」の下に、前月の合計を表示しました" },
   { date: "2026-10-16", type: "fix", text: "スプレッドシート送信で、送る期間を選べるようにしました（締めの直後に、前の期間の分を送れます）" },
   { date: "2026-10-07", type: "fix", text: "バグ点検の指摘を修正しました（写真の「あり」表示が消える可能性、保存に失敗したときの画面の動き、撮影の取り消し後の誤った案内など）" },
@@ -325,6 +326,7 @@ function injectIcons() {
   injectIcon("gasLinkIcon", LINK_ICON_SVG);
   injectIcon("gasTestIcon", LINK_ICON_SVG);
   injectIcon("gasSendIcon", SEND_ICON_SVG);
+  injectIcon("gasBoxBackupIcon", SEND_ICON_SVG);
   injectIcon("copyAppUrlIcon", COPY_ICON_SVG);
   injectIcon("shareAppIcon", SEND_ICON_SVG);
   injectIcon("guideIcon", BOOK_ICON_SVG);
@@ -1059,6 +1061,7 @@ const gasUrlInput = document.getElementById("gasUrlInput");
 const gasTokenInput = document.getElementById("gasTokenInput");
 const gasTestBtn = document.getElementById("gasTestBtn");
 const gasSendBtn = document.getElementById("gasSendBtn");
+const gasBoxBackupBtn = document.getElementById("gasBoxBackupBtn");
 const gasStatusText = document.getElementById("gasStatusText");
 const appUrlText = document.getElementById("appUrlText");
 const copyAppUrlBtn = document.getElementById("copyAppUrlBtn");
@@ -1583,9 +1586,19 @@ async function buildPeriodPayload(start, name) {
 }
 
 async function exportCurrentPeriod(options = {}) {
-  const { skipConfirm = false, periodStart = currentPeriodStart, markSent = true } = options;
+  const { skipConfirm = false, periodStart = currentPeriodStart, markSent = true, forceBox = false } = options;
   const start = periodStart;
   const end = periodEndFor(start);
+
+  // スプレッドシート送信が設定済みなら、Box用の共有シートは出さずにそちらへ送る
+  if (!forceBox && isGasConfigured()) {
+    const ok = await submitPeriodToGas(start, { silent: !markSent });
+    if (ok && markSent) {
+      setSentAt(fmtKey(start), Date.now());
+      renderList();
+    }
+    return;
+  }
 
   const name = getUserName();
   if (!name) {
@@ -2074,30 +2087,32 @@ gasTestBtn.addEventListener("click", async () => {
   }
 });
 
-gasSendBtn.addEventListener("click", async () => {
+function isGasConfigured() {
+  return !!(getLocal(GAS_URL_KEY) && getLocal(GAS_TOKEN_KEY));
+}
+
+// 1期間分をスプレッドシートへ送る。送れたら true（キャンセル・失敗は false）。
+// silent: 確認ダイアログも結果表示も出さない（自動バックアップ用）
+async function submitPeriodToGas(start, { silent = false } = {}) {
   const name = getUserName();
   if (!name) {
-    alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
-    return;
+    if (!silent) alert("氏名が未設定です。設定画面で氏名を入力してから送信してください。");
+    return false;
   }
-  setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
-  setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
-  const [py, pm, pd] = gasPeriodSelect.value.split("-").map(Number);
-  const start = new Date(py, pm - 1, pd); // 選んだ期間の開始日（16日）
-  gasSendBtn.disabled = true;
   try {
     const payload = await buildPeriodPayload(start, name);
     const filled = payload.records.filter((r) => r.start != null && r.end != null).length;
     if (
+      !silent &&
       !confirm(
-        `${payload.periodStart} 〜 ${payload.periodEnd} の記録（入力済み ${filled}日）を、スプレッドシートへ送ります。\n同じ日付は上書きされます。よろしいですか？`
+        `${payload.periodStart} 〜 ${payload.periodEnd} の記録（入力済み ${filled}日）を、スプレッドシートへ送ります。
+同じ日付は上書きされます。よろしいですか？`
       )
     ) {
-      return;
+      return false;
     }
-    setGasStatus("送信中…（初回は専用シートを作るため、少し時間がかかります）");
-    const email = gasEmailInput.value.trim();
-    setLocal(GAS_EMAIL_KEY, email);
+    if (!silent) setGasStatus("送信中…（初回は専用シートを作るため、少し時間がかかります）");
+    const email = getLocal(GAS_EMAIL_KEY);
     const res = await gasRequest("submitPeriod", { ...payload, email });
     let log = {};
     try {
@@ -2109,24 +2124,51 @@ gasSendBtn.addEventListener("click", async () => {
     if (res.personal && typeof res.personal.url === "string" && res.personal.url.startsWith(GAS_PERSONAL_URL_PREFIX)) {
       setLocal(GAS_PERSONAL_URL_KEY, res.personal.url);
       updateGasPersonalLink();
-      if (res.personal.error) setGasStatus(`${gasStatusText.textContent}\n${res.personal.error}`);
+      if (res.personal.error) setGasStatus(`${gasStatusText.textContent}
+${res.personal.error}`);
     } else if (res.personal && res.personal.pending) {
-      setGasStatus(`${gasStatusText.textContent}\n${res.personal.pending}`);
+      setGasStatus(`${gasStatusText.textContent}
+${res.personal.pending}`);
     } else if (res.personal && res.personal.skipped) {
-      setGasStatus(`${gasStatusText.textContent}\nメールアドレス（@kk35.jp）を入れると、あなた専用のシートが作られます`);
+      setGasStatus(`${gasStatusText.textContent}
+メールアドレス（@kk35.jp）を入れると、あなた専用のシートが作られます`);
     } else if (res.personal && res.personal.error) {
-      setGasStatus(`${gasStatusText.textContent}\n専用シートの更新に失敗しました: ${res.personal.error}`);
+      setGasStatus(`${gasStatusText.textContent}
+専用シートの更新に失敗しました: ${res.personal.error}`);
     }
     if (Array.isArray(res.incompleteDays) && res.incompleteDays.length) {
       const days = res.incompleteDays.map((d) => String(d).slice(5).replace("-", "/")).join("、");
-      setGasStatus(`${gasStatusText.textContent}\n※ 始針か終針が空の日は、専用シートに入りません: ${days}`);
+      setGasStatus(`${gasStatusText.textContent}
+※ 始針か終針が空の日は、専用シートに入りません: ${days}`);
+      if (!silent) alert(`始針か終針が空の日は、専用シートに入りません: ${days}`);
     }
-    showSavedToast(`送りました（追加${res.added}・更新${res.updated}・削除${res.removed}）`);
+    if (!silent) showSavedToast(`送りました（追加${res.added}・更新${res.updated}・削除${res.removed}）`);
+    return true;
   } catch (e) {
     setGasStatus(`× 送れませんでした: ${e.message}`);
+    if (!silent) alert(`送れませんでした: ${e.message}`);
+    return false;
+  }
+}
+
+gasSendBtn.addEventListener("click", async () => {
+  setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
+  setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
+  setLocal(GAS_EMAIL_KEY, gasEmailInput.value.trim());
+  const [py, pm, pd] = gasPeriodSelect.value.split("-").map(Number);
+  const start = new Date(py, pm - 1, pd); // 選んだ期間の開始日（16日）
+  gasSendBtn.disabled = true;
+  try {
+    await submitPeriodToGas(start);
   } finally {
     gasSendBtn.disabled = false;
   }
+});
+
+// スプレッドシート送信が設定済みなら、Boxへの共有シートは出さない（設定画面の「予備」ボタンからだけ出す）
+gasBoxBackupBtn.addEventListener("click", () => {
+  const [py, pm, pd] = gasPeriodSelect.value.split("-").map(Number);
+  exportCurrentPeriod({ forceBox: true, periodStart: new Date(py, pm - 1, pd) });
 });
 
 /* ---------- イベント ---------- */
