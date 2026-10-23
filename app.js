@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 49;
+const APP_VERSION = 50;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-23", type: "feature", text: "ホームの「今月分を送信」で、先月分がまだ送られていないときは「先月分・今月分のどちらを送るか」を聞くようにしました（20日を過ぎても先月分を送れます）" },
   { date: "2026-10-23", type: "feature", text: "スプレッドシートへ送るとき、送信中の画面と結果（送れた件数・専用シートを開くボタン）を表示するようにしました" },
   { date: "2026-10-22", type: "feature", text: "スプレッドシート送信を設定している端末では、「送信」ボタンで共有シート（Box）を出さず、そのままスプレッドシートへ送るようにしました。Box用は設定の「Box用ファイルを共有（予備）」から" },
   { date: "2026-10-16", type: "feature", text: "ホーム画面の「今月の走行距離」の下に、前月の合計を表示しました" },
@@ -1130,6 +1131,10 @@ const sendTitle = document.getElementById("sendTitle");
 const sendDetail = document.getElementById("sendDetail");
 const sendSheetLink = document.getElementById("sendSheetLink");
 const sendCloseBtn = document.getElementById("sendCloseBtn");
+const sendChoiceRow = document.getElementById("sendChoiceRow");
+const sendChoicePrevBtn = document.getElementById("sendChoicePrevBtn");
+const sendChoiceCurBtn = document.getElementById("sendChoiceCurBtn");
+const sendChoiceCancelBtn = document.getElementById("sendChoiceCancelBtn");
 const distanceSummaryValue = document.getElementById("distanceSummaryValue");
 const distanceSummaryUnit = document.getElementById("distanceSummaryUnit");
 const distanceSummaryExtra = document.getElementById("distanceSummaryExtra");
@@ -2451,8 +2456,63 @@ startTodayBtn.addEventListener("click", async () => {
   if (detailView.hidden) homeView.hidden = false; // 開けなかったときに、画面が真っ白のままにならないようにする
 });
 
+// 送信済みか（月次送信の記録か、スプレッドシートへ送った記録のどちらかがあれば送信済み）
+function isPeriodSent(periodStartKey) {
+  if (getSentAt(periodStartKey)) return true;
+  try {
+    const gasLog = JSON.parse(getLocal(GAS_SENT_KEY) || "{}") || {};
+    return !!gasLog[periodStartKey];
+  } catch (e) {
+    return false;
+  }
+}
+
+function periodRangeLabel(start) {
+  const end = periodEndFor(start);
+  return `${start.getMonth() + 1}/${start.getDate()}〜${end.getMonth() + 1}/${end.getDate()}`;
+}
+
+// 先月分がまだ送られていなければ、日付に関係なく「どちらを送るか」を聞く。
+// 先月分の記録が1件もない（使い始めたばかり等）なら聞かずに今月分。キャンセルなら null
+async function choosePeriodForHomeSend() {
+  const current = periodStartFor(new Date());
+  const prev = shiftPeriod(current, -1);
+  if (isPeriodSent(fmtKey(prev))) return current;
+  const prevRecords = await getRecordsInRange(fmtKey(prev), fmtKey(periodEndFor(prev)));
+  if (!prevRecords.some((r) => r.start != null || r.end != null)) return current;
+  return showPeriodChoice(prev, current);
+}
+
+function showPeriodChoice(prev, current) {
+  return new Promise((resolve) => {
+    sendSpinner.hidden = true;
+    sendResultIcon.hidden = true;
+    sendSheetLink.hidden = true;
+    sendCloseBtn.hidden = true;
+    sendOverlay.classList.remove("isError");
+    sendTitle.textContent = "どの期間を送りますか？";
+    sendDetail.textContent = "先月分がまだ送信されていません";
+    sendChoicePrevBtn.textContent = `先月分（${periodRangeLabel(prev)}）`;
+    sendChoiceCurBtn.textContent = `今月分（${periodRangeLabel(current)}）`;
+    sendChoiceRow.hidden = false;
+    sendOverlay.hidden = false;
+    const finish = (value) => {
+      sendChoiceRow.hidden = true;
+      sendOverlay.hidden = true;
+      sendChoicePrevBtn.onclick = sendChoiceCurBtn.onclick = sendChoiceCancelBtn.onclick = null;
+      resolve(value);
+    };
+    sendChoicePrevBtn.onclick = () => finish(prev);
+    sendChoiceCurBtn.onclick = () => finish(current);
+    sendChoiceCancelBtn.onclick = () => finish(null);
+    sendChoicePrevBtn.focus();
+  });
+}
+
 homeExportBtn.addEventListener("click", async () => {
-  currentPeriodStart = periodForQuickSend(new Date());
+  const start = await choosePeriodForHomeSend();
+  if (!start) return;
+  currentPeriodStart = start;
   await exportCurrentPeriod();
 });
 

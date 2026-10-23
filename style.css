@@ -1535,3 +1535,22 @@ html, body {
   background: var(--accent);
   color: var(--on-accent);
 }
+.sendChoiceRow {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sendChoiceRow[hidden] {
+  display: none;
+}
+.sendChoiceRow button {
+  font-family: inherit;
+}
+.sendChoiceCancel {
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--sub);
+  font-size: 14px;
+}
