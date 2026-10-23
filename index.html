@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=29">
+<link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 
@@ -508,6 +508,17 @@
   <div class="loadingText">写真を処理しています…</div>
 </div>
 
+<div id="sendOverlay" class="sendOverlay" role="dialog" aria-modal="true" aria-live="polite" hidden>
+  <div class="sendPanel">
+    <div id="sendSpinner" class="spinner"></div>
+    <div id="sendResultIcon" class="sendResultIcon" hidden></div>
+    <div id="sendTitle" class="sendTitle"></div>
+    <div id="sendDetail" class="sendDetail"></div>
+    <a id="sendSheetLink" class="sendSheetLink" href="#" target="_blank" rel="noopener" hidden>専用シートを開く</a>
+    <button id="sendCloseBtn" class="sendCloseBtn" hidden>閉じる</button>
+  </div>
+</div>
+
 <div id="photoChoiceSheet" class="photoChoiceSheet" hidden>
   <div class="photoChoiceBackdrop"></div>
   <div class="photoChoicePanel">
@@ -518,6 +529,6 @@
   </div>
 </div>
 
-<script src="app.js?v=48"></script>
+<script src="app.js?v=49"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 48;
+const APP_VERSION = 49;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -16,6 +16,7 @@ function maybeApplyUpdate() {
     loadingView.hidden &&
     !homeView.hidden &&
     photoProcessingOverlay.hidden &&
+    sendOverlay.hidden &&
     photoChoiceSheet.hidden &&
     lightbox.hidden &&
     !hasPendingShot();
@@ -204,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-23", type: "feature", text: "スプレッドシートへ送るとき、送信中の画面と結果（送れた件数・専用シートを開くボタン）を表示するようにしました" },
   { date: "2026-10-22", type: "feature", text: "スプレッドシート送信を設定している端末では、「送信」ボタンで共有シート（Box）を出さず、そのままスプレッドシートへ送るようにしました。Box用は設定の「Box用ファイルを共有（予備）」から" },
   { date: "2026-10-16", type: "feature", text: "ホーム画面の「今月の走行距離」の下に、前月の合計を表示しました" },
   { date: "2026-10-16", type: "fix", text: "スプレッドシート送信で、送る期間を選べるようにしました（締めの直後に、前の期間の分を送れます）" },
@@ -1121,6 +1123,13 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightboxImg");
 const lightboxCloseBtn = document.getElementById("lightboxCloseBtn");
 const photoProcessingOverlay = document.getElementById("photoProcessingOverlay");
+const sendOverlay = document.getElementById("sendOverlay");
+const sendSpinner = document.getElementById("sendSpinner");
+const sendResultIcon = document.getElementById("sendResultIcon");
+const sendTitle = document.getElementById("sendTitle");
+const sendDetail = document.getElementById("sendDetail");
+const sendSheetLink = document.getElementById("sendSheetLink");
+const sendCloseBtn = document.getElementById("sendCloseBtn");
 const distanceSummaryValue = document.getElementById("distanceSummaryValue");
 const distanceSummaryUnit = document.getElementById("distanceSummaryUnit");
 const distanceSummaryExtra = document.getElementById("distanceSummaryExtra");
@@ -2091,6 +2100,37 @@ function isGasConfigured() {
   return !!(getLocal(GAS_URL_KEY) && getLocal(GAS_TOKEN_KEY));
 }
 
+// 送信中〜結果の画面（送れたのか分からないまま元の画面に戻らないように、結果を見て閉じてもらう）
+function showSendProgress(detail) {
+  sendSpinner.hidden = false;
+  sendResultIcon.hidden = true;
+  sendTitle.textContent = "スプレッドシートへ送信中…";
+  sendDetail.textContent = detail;
+  sendSheetLink.hidden = true;
+  sendCloseBtn.hidden = true;
+  sendOverlay.classList.remove("isError");
+  sendOverlay.hidden = false;
+}
+
+function showSendResult(ok, title, detail, sheetUrl) {
+  sendSpinner.hidden = true;
+  sendResultIcon.hidden = false;
+  sendResultIcon.textContent = ok ? "✓" : "!";
+  sendOverlay.classList.toggle("isError", !ok);
+  sendTitle.textContent = title;
+  sendDetail.textContent = detail;
+  sendSheetLink.hidden = !sheetUrl;
+  if (sheetUrl) sendSheetLink.href = sheetUrl;
+  sendCloseBtn.hidden = false;
+  sendOverlay.hidden = false;
+  sendCloseBtn.focus();
+}
+
+sendCloseBtn.addEventListener("click", () => {
+  sendOverlay.hidden = true;
+  maybeApplyUpdate();
+});
+
 // 1期間分をスプレッドシートへ送る。送れたら true（キャンセル・失敗は false）。
 // silent: 確認ダイアログも結果表示も出さない（自動バックアップ用）
 async function submitPeriodToGas(start, { silent = false } = {}) {
@@ -2111,7 +2151,11 @@ async function submitPeriodToGas(start, { silent = false } = {}) {
     ) {
       return false;
     }
-    if (!silent) setGasStatus("送信中…（初回は専用シートを作るため、少し時間がかかります）");
+    const periodLabel = `${payload.periodStart.slice(5).replace("-", "/")}〜${payload.periodEnd.slice(5).replace("-", "/")}`;
+    if (!silent) {
+      setGasStatus("送信中…");
+      showSendProgress(`${periodLabel}（入力済み ${filled}日）\n初めての送信は、専用シートを作るため少し時間がかかります`);
+    }
     const email = getLocal(GAS_EMAIL_KEY);
     const res = await gasRequest("submitPeriod", { ...payload, email });
     let log = {};
@@ -2140,13 +2184,20 @@ ${res.personal.pending}`);
       const days = res.incompleteDays.map((d) => String(d).slice(5).replace("-", "/")).join("、");
       setGasStatus(`${gasStatusText.textContent}
 ※ 始針か終針が空の日は、専用シートに入りません: ${days}`);
-      if (!silent) alert(`始針か終針が空の日は、専用シートに入りません: ${days}`);
     }
-    if (!silent) showSavedToast(`送りました（追加${res.added}・更新${res.updated}・削除${res.removed}）`);
+    if (!silent) {
+      const notes = [`${periodLabel}（入力済み ${filled}日）`, `追加${res.added}・更新${res.updated}・削除${res.removed}`];
+      if (res.personal && res.personal.pending) notes.push(res.personal.pending);
+      if (res.personal && res.personal.error) notes.push(`専用シートの更新に失敗しました: ${res.personal.error}`);
+      if (Array.isArray(res.incompleteDays) && res.incompleteDays.length) {
+        notes.push(`※ 始針か終針が空の日は専用シートに入りません: ${res.incompleteDays.map((d) => String(d).slice(5).replace("-", "/")).join("、")}`);
+      }
+      showSendResult(true, "送信しました", notes.join("\n"), getLocal(GAS_PERSONAL_URL_KEY));
+    }
     return true;
   } catch (e) {
     setGasStatus(`× 送れませんでした: ${e.message}`);
-    if (!silent) alert(`送れませんでした: ${e.message}`);
+    if (!silent) showSendResult(false, "送れませんでした", `${e.message}\n電波のよい所で、もう一度送ってください`);
     return false;
   }
 }

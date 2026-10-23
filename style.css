@@ -1457,3 +1457,81 @@ html, body {
   padding: 10px 12px;
   font-weight: 600;
 }
+
+/* スプレッドシート送信中〜結果の画面 */
+.sendOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 160;
+}
+.sendOverlay[hidden] {
+  display: none;
+}
+.sendPanel {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 20px 20px;
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--text);
+  text-align: center;
+}
+.sendPanel [hidden] {
+  display: none;
+}
+.sendResultIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.sendOverlay.isError .sendResultIcon {
+  background: var(--danger);
+  color: #fff;
+}
+.sendTitle {
+  font-size: 17px;
+  font-weight: 700;
+}
+.sendDetail {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sub);
+  white-space: pre-line;
+}
+.sendSheetLink,
+.sendCloseBtn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.sendSheetLink {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+.sendCloseBtn {
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+}
