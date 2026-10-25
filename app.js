@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 59;
+const APP_VERSION = 60;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "写真を削除したときや「前回の終了写真を使う」に差し替えたときは、前の写真の読み取りを取り消すようにしました（消した写真の数字が後から入らないように）" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取り結果を、アプリを長く閉じていても受け取れるようにしました（3時間で諦めていたのを24時間に。期限が過ぎても一度は結果を見に行きます）" },
   { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を続けて撮ると読み取りが抜けることがある・撮り直し前の写真の数字が入ることがある・前回の終了距離が写真の読み違いで置き換わる・自動バックアップが「送信済み」扱いになる・圏外で撮った写真が翌日送られない）" },
   { date: "2026-10-25", type: "fix", text: "写真から入った数字の案内は、「確認した」を押すか自分で打ち替えるまで残り、欄を空にすると消えるようにしました" },
@@ -2515,6 +2516,21 @@ async function startOcrForSlot(dateKey, slot, blob) {
   processOcrQueue();
 }
 
+// 写真を消したとき・前回の終了写真に差し替えたときに呼ぶ。その欄の送信待ち・読み取り待ち・結果をすべて捨てる
+// （消した写真の数字があとから欄に入ったり、消した写真の案内が残ったりしないように）
+function cancelOcrForSlot(dateKey, slot) {
+  const key = `${dateKey}|${slot}`;
+  for (const storeKey of [OCR_QUEUE_KEY, OCR_PENDING_KEY, OCR_RESULT_KEY]) {
+    const map = readJsonLocal(storeKey);
+    if (map[key]) {
+      delete map[key];
+      setLocal(storeKey, JSON.stringify(map));
+    }
+  }
+  delete ocrLastError[key];
+  if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+}
+
 let ocrQueueRunning = false;
 
 // 送信待ちの写真を1枚ずつ GAS へ預ける（アプリを開いたとき・画面に戻ったときにも呼ぶ）
@@ -3369,6 +3385,7 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
   const uploaded = getUploadedPhotos();
   uploaded[`${targetDate}|start`] = copy.size;
   setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
+  cancelOcrForSlot(targetDate, "start"); // 差し替える前の写真の読み取りは捨てる
 });
 photoChoiceCancelBtn.addEventListener("click", () => {
   pendingSlot = null;
@@ -3464,6 +3481,7 @@ saveOriginalEndBtn.addEventListener("click", (ev) => {
 
 removePhotoStartBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
+  const dateKey = currentDetailDate; // 保存を待つ間に別の日が開かれても、消した日の分を取り消す
   currentPhotoStart = null;
   photoWrite.start = true;
   originalPhotoStart = null;
@@ -3471,10 +3489,12 @@ removePhotoStartBtn.addEventListener("click", async (ev) => {
   saveOriginalStartBtn.hidden = true;
   refreshPhotoPreview("start");
   await saveDetailWithErrorAlert();
+  if (dateKey) cancelOcrForSlot(dateKey, "start");
 });
 
 removePhotoEndBtn.addEventListener("click", async (ev) => {
   ev.stopPropagation();
+  const dateKey = currentDetailDate; // 保存を待つ間に別の日が開かれても、消した日の分を取り消す
   currentPhotoEnd = null;
   photoWrite.end = true;
   originalPhotoEnd = null;
@@ -3482,6 +3502,7 @@ removePhotoEndBtn.addEventListener("click", async (ev) => {
   saveOriginalEndBtn.hidden = true;
   refreshPhotoPreview("end");
   await saveDetailWithErrorAlert();
+  if (dateKey) cancelOcrForSlot(dateKey, "end");
 });
 
 async function saveDetailAndToast() {
