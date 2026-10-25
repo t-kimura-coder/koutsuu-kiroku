@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 55;
+const APP_VERSION = 56;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "feature", text: "写真の読み取りで、写真の下に「送信中 → 送信済み・受け取り中 → 受け取りました」と進み具合が出るようにしました" },
   { date: "2026-10-25", type: "fix", text: "「前回の終了写真を使う」で入れた開始写真は、同じ写真が2枚届かないよう送らないようにしました" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取りで「送るデータが大きすぎます」になるのを直しました。写真を撮ってすぐアプリを閉じても、次に開いたときに送られるようにしました" },
   { date: "2026-10-25", type: "feature", text: "オプションに「定休日」を追加しました。選んだ曜日は、記録を開いても前回の終了距離が開始距離に自動で入りません" },
@@ -1122,6 +1123,8 @@ const ocrAutoCheckbox = document.getElementById("ocrAutoCheckbox");
 const holidayWeekdays = document.getElementById("holidayWeekdays");
 const ocrHintStart = document.getElementById("ocrHintStart");
 const ocrHintEnd = document.getElementById("ocrHintEnd");
+const photoStatusStart = document.getElementById("photoStatusStart");
+const photoStatusEnd = document.getElementById("photoStatusEnd");
 const gasStatusText = document.getElementById("gasStatusText");
 const appUrlText = document.getElementById("appUrlText");
 const copyAppUrlBtn = document.getElementById("copyAppUrlBtn");
@@ -2406,6 +2409,14 @@ function showOcrHint(slot, text, cls) {
   el.hidden = !text;
 }
 
+// 写真の下に出す進み具合（送信中 → 送信済み・数字を受け取り中 → 受け取り済み）
+function showPhotoStatus(slot, text, cls) {
+  const el = slot === "start" ? photoStatusStart : photoStatusEnd;
+  el.className = "photoStatus" + (cls ? ` ${cls}` : "");
+  el.textContent = text || "";
+  el.hidden = !text;
+}
+
 // 開いている日の、読み取りの状態を欄の下に出す（openDetail から呼ぶ）
 function refreshOcrHints(dateKey) {
   const queue = readJsonLocal(OCR_QUEUE_KEY);
@@ -2415,18 +2426,25 @@ function refreshOcrHints(dateKey) {
     const key = `${dateKey}|${slot}`;
     const input = slot === "start" ? startInput : endInput;
     if (queue[key] && ocrLastError[key]) {
-      showOcrHint(slot, `写真を送れませんでした: ${ocrLastError[key]}（次にアプリを開いたときに送り直します）`, "isWaiting");
+      showPhotoStatus(slot, "送れませんでした（次に開いたときに送り直します）", "isError");
+      showOcrHint(slot, `写真を送れませんでした: ${ocrLastError[key]}`, "isWaiting");
     } else if (queue[key]) {
-      showOcrHint(slot, "写真を送っています…", "isWaiting");
+      showPhotoStatus(slot, "写真を送信中…（閉じると次回に持ち越し）", "isBusy");
+      showOcrHint(slot, "");
     } else if (pending[key]) {
-      showOcrHint(slot, "写真を読み取り中…（数分かかることがあります）", "isWaiting");
+      showPhotoStatus(slot, "送信済み・数字を受け取り中…（閉じてOK）", "isBusy");
+      showOcrHint(slot, "読み取りには数分かかります", "isWaiting");
     } else if (results[key] && results[key].read == null) {
-      showOcrHint(slot, "写真から数字を読み取れませんでした", "isWaiting");
+      showPhotoStatus(slot, "送信済み・数字は読めませんでした", "isError");
+      showOcrHint(slot, "写真から数字を読み取れませんでした。手で入れてください", "isWaiting");
     } else if (results[key] && input.value !== "" && parseFloat(input.value) === results[key].read) {
+      showPhotoStatus(slot, "数字を受け取りました", "isDone");
       showOcrHint(slot, "写真から読み取った数字です。写真と見比べてください");
     } else if (results[key] && input.value !== "") {
+      showPhotoStatus(slot, "数字を受け取りました", "isDone");
       showOcrHint(slot, `写真の数字は ${results[key].read} と読めました（欄と違います）`, "isDiff");
     } else {
+      showPhotoStatus(slot, "");
       showOcrHint(slot, "");
     }
   }

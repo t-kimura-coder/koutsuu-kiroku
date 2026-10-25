@@ -1605,3 +1605,44 @@ html, body {
   height: 18px;
   accent-color: var(--accent);
 }
+
+/* 写真の下の進み具合（送信中 → 受け取り中 → 受け取りました） */
+.photoStatus {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--sub);
+}
+.photoStatus[hidden] {
+  display: none;
+}
+.photoStatus::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--sub);
+  vertical-align: 1px;
+}
+.photoStatus.isBusy::before {
+  background: var(--accent);
+  animation: photoStatusPulse 1.2s ease-in-out infinite;
+}
+.photoStatus.isDone {
+  color: var(--accent);
+}
+.photoStatus.isDone::before {
+  background: var(--accent);
+}
+.photoStatus.isError {
+  color: var(--danger);
+}
+.photoStatus.isError::before {
+  background: var(--danger);
+}
+@keyframes photoStatusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
