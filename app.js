@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 50;
+const APP_VERSION = 51;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "feature", text: "スプレッドシートへ送ったあと、その期間のメーター写真も裏で送るようにしました（写真から数字を読み取る仕組みの準備です。操作は変わりません）" },
   { date: "2026-10-23", type: "feature", text: "ホームの「今月分を送信」で、先月分がまだ送られていないときは「先月分・今月分のどちらを送るか」を聞くようにしました（20日を過ぎても先月分を送れます）" },
   { date: "2026-10-23", type: "feature", text: "スプレッドシートへ送るとき、送信中の画面と結果（送れた件数・専用シートを開くボタン）を表示するようにしました" },
   { date: "2026-10-22", type: "feature", text: "スプレッドシート送信を設定している端末では、「送信」ボタンで共有シート（Box）を出さず、そのままスプレッドシートへ送るようにしました。Box用は設定の「Box用ファイルを共有（予備）」から" },
@@ -1916,6 +1917,7 @@ const GAS_TOKEN_KEY = "koutsuu-kiroku-gas-token";
 const GAS_SENT_KEY = "koutsuu-kiroku-gas-sent";
 const GAS_EMAIL_KEY = "koutsuu-kiroku-gas-email";
 const GAS_PERSONAL_URL_KEY = "koutsuu-kiroku-gas-personal-url";
+const GAS_PHOTO_UPLOADED_KEY = "koutsuu-kiroku-gas-photo-uploaded"; // 送った写真 {"日付|区分": 画像のバイト数}
 const GAS_URL_PREFIX = "https://script.google.com/macros/s/";
 
 function getLocal(key) {
@@ -2199,11 +2201,99 @@ ${res.personal.pending}`);
       }
       showSendResult(true, "送信しました", notes.join("\n"), getLocal(GAS_PERSONAL_URL_KEY));
     }
+    // 記録が送れたら、その期間のメーター写真を裏で1枚ずつ送る（結果画面は待たせない）
+    uploadPeriodPhotos(payload, name, email);
     return true;
   } catch (e) {
     setGasStatus(`× 送れませんでした: ${e.message}`);
     if (!silent) showSendResult(false, "送れませんでした", `${e.message}\n電波のよい所で、もう一度送ってください`);
     return false;
+  }
+}
+
+/* ---------- メーター写真の送信（読み取り用のデータ集め） ----------
+   記録の送信が済んだあと、その期間の写真を幅1280pxに縮めて1枚ずつ GAS に預ける。
+   送った写真は端末に覚えておき（日付|区分 → バイト数）、同じ写真は二度送らない。
+   写真を撮り直すとバイト数が変わるので、そのときだけ送り直す */
+const PHOTO_UPLOAD_MAX_WIDTH = 1280;
+
+function getUploadedPhotos() {
+  try {
+    return JSON.parse(getLocal(GAS_PHOTO_UPLOADED_KEY) || "{}") || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+// JPEG(幅1280px以下)に縮めて、base64（data: の前置きなし）で返す
+async function shrinkPhotoForUpload(blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("写真を読み込めません"));
+      el.src = url;
+    });
+    const scale = Math.min(1, PHOTO_UPLOAD_MAX_WIDTH / img.naturalWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    return dataUrl.slice(dataUrl.indexOf(",") + 1);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+let photoUploadRunning = false;
+
+async function uploadPeriodPhotos(payload, name, email) {
+  if (photoUploadRunning) return;
+  photoUploadRunning = true;
+  try {
+    const uploaded = getUploadedPhotos();
+    const jobs = [];
+    const records = await getRecordsInRange(payload.periodStart, payload.periodEnd);
+    for (const r of records) {
+      if (r.hasPhotoStart) jobs.push({ date: r.date, slot: "start", value: r.start });
+      if (r.hasPhotoEnd) jobs.push({ date: r.date, slot: "end", value: r.end });
+    }
+    let sent = 0;
+    let failed = 0;
+    let skipped = 0;
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      const key = `${job.date}|${job.slot}`;
+      try {
+        const blob = await getImage(job.date, job.slot);
+        if (!blob) {
+          skipped++;
+          continue;
+        }
+        if (uploaded[key] === blob.size) {
+          skipped++;
+          continue;
+        }
+        setGasStatus(`写真を送っています ${i + 1}/${jobs.length}`);
+        const image = await shrinkPhotoForUpload(blob);
+        await gasRequest("uploadPhoto", { name, email, date: job.date, slot: job.slot, value: job.value, image });
+        uploaded[key] = blob.size;
+        setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
+        sent++;
+      } catch (e) {
+        console.warn("photo upload failed", key, e);
+        failed++;
+        if (e instanceof TypeError || /通信できません|時間内に返事/.test(e.message)) break; // 電波が無いときは続けない
+      }
+    }
+    updateGasStatus();
+    if (sent || failed) {
+      setGasStatus(`${gasStatusText.textContent}\n写真: ${sent}枚を送りました${failed ? `（${failed}枚は送れず、次回に送ります）` : ""}`);
+    }
+  } finally {
+    photoUploadRunning = false;
   }
 }
 
