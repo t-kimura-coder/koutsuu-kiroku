@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 61;
+const APP_VERSION = 62;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "feature", text: "お知らせ一覧を「新機能」「修正」「すべて」のタブで切り替えられるようにしました（前回選んだタブを覚えます）" },
   { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を消した直後に前の写真の数字が入ることがある・読み取りを切った状態で撮り直すと前の写真の数字が入る・前回の終了写真が二重に送られることがある）" },
   { date: "2026-10-25", type: "fix", text: "写真を削除したときや「前回の終了写真を使う」に差し替えたときは、前の写真の読み取りを取り消すようにしました（消した写真の数字が後から入らないように）" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取り結果を、アプリを長く閉じていても受け取れるようにしました（3時間で諦めていたのを24時間に。期限が過ぎても一度は結果を見に行きます）" },
@@ -263,14 +264,46 @@ function renderHomeAnnouncement() {
   homeAnnouncement.hidden = false;
 }
 
+const ANNOUNCE_FILTER_KEY = "koutsuu-kiroku-announce-filter";
+const announceTabs = document.querySelectorAll(".announceTab");
+
+// 「新機能」「修正」「すべて」の切り替え。前回選んだタブを覚えておく（初めては新機能）
+function getAnnounceFilter() {
+  let v = "feature";
+  try {
+    v = localStorage.getItem(ANNOUNCE_FILTER_KEY) || "feature";
+  } catch (e) {}
+  return ["feature", "fix", "all"].includes(v) ? v : "feature";
+}
+
 function renderAnnounceList() {
-  announceListBody.innerHTML = ANNOUNCEMENTS.map(
+  const filter = getAnnounceFilter();
+  for (const tab of announceTabs) {
+    const f = tab.dataset.filter;
+    const count = f === "all" ? ANNOUNCEMENTS.length : ANNOUNCEMENTS.filter((a) => a.type === f).length;
+    tab.textContent = `${f === "feature" ? "新機能" : f === "fix" ? "修正" : "すべて"}（${count}）`;
+    tab.classList.toggle("isActive", f === filter);
+    tab.setAttribute("aria-selected", f === filter ? "true" : "false");
+  }
+  const items = filter === "all" ? ANNOUNCEMENTS : ANNOUNCEMENTS.filter((a) => a.type === filter);
+  announceListBody.innerHTML = items.map(
     (a) =>
       `<div class="announceCard">` +
       `<div class="announceCardHead">${announceBadgeHtml(a.type)}<span class="announceDate">${fmtAnnounceDate(a.date)}</span></div>` +
       `<div class="announceCardText">${escapeHtml(a.text)}</div>` +
       `</div>`
   ).join("");
+}
+
+for (const tab of announceTabs) {
+  tab.addEventListener("click", () => {
+    try {
+      localStorage.setItem(ANNOUNCE_FILTER_KEY, tab.dataset.filter);
+    } catch (e) {}
+    renderAnnounceList();
+    announceView.scrollTop = 0;
+    window.scrollTo(0, 0);
+  });
 }
 
 function injectIcon(id, svg) {

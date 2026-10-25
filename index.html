@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 
@@ -464,6 +464,11 @@
     <div style="width:2.5em"></div>
   </header>
   <div class="detailBody">
+    <div class="announceTabs" role="tablist" aria-label="お知らせの種類">
+      <button type="button" class="announceTab" role="tab" data-filter="feature">新機能</button>
+      <button type="button" class="announceTab" role="tab" data-filter="fix">修正</button>
+      <button type="button" class="announceTab" role="tab" data-filter="all">すべて</button>
+    </div>
     <div id="announceListBody" class="announceList"></div>
   </div>
 </div>
@@ -550,6 +555,6 @@
   </div>
 </div>
 
-<script src="app.js?v=61"></script>
+<script src="app.js?v=62"></script>
 </body>
 </html>

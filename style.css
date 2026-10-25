@@ -417,6 +417,33 @@ html, body {
   background: var(--warning-bg);
 }
 
+.announceTabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--muted-bg);
+}
+
+.announceTab {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--sub);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.announceTab.isActive {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 .announceList {
   display: flex;
   flex-direction: column;
