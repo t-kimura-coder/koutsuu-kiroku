@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 58;
+const APP_VERSION = 59;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "写真の読み取り結果を、アプリを長く閉じていても受け取れるようにしました（3時間で諦めていたのを24時間に。期限が過ぎても一度は結果を見に行きます）" },
   { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を続けて撮ると読み取りが抜けることがある・撮り直し前の写真の数字が入ることがある・前回の終了距離が写真の読み違いで置き換わる・自動バックアップが「送信済み」扱いになる・圏外で撮った写真が翌日送られない）" },
   { date: "2026-10-25", type: "fix", text: "写真から入った数字の案内は、「確認した」を押すか自分で打ち替えるまで残り、欄を空にすると消えるようにしました" },
   { date: "2026-10-25", type: "feature", text: "写真の読み取りで、写真の下に「送信中 → 送信済み・受け取り中 → 受け取りました」と進み具合が出るようにしました" },
@@ -2389,7 +2390,7 @@ const OCR_QUEUE_KEY = "koutsuu-kiroku-ocr-queue"; // {"日付|区分": {at, type
 const OCR_PENDING_KEY = "koutsuu-kiroku-ocr-pending"; // {"日付|区分": {fileId, at}} 預けて読み取り待ち
 const OCR_RESULT_KEY = "koutsuu-kiroku-ocr-result"; // {"日付|区分": {read, at}} 読めなかったときは read: null
 const OCR_POLL_MS = 20000;
-const OCR_GIVE_UP_MS = 3 * 60 * 60 * 1000; // 預けてから3時間たっても読まれなければ諦める（PCが止まっている等）
+const OCR_GIVE_UP_MS = 24 * 60 * 60 * 1000; // 預けてから24時間たっても読まれなければ諦める（PCが止まっている等。昼間は1時間おきにしか読まないため）
 const OCR_QUEUE_GIVE_UP_MS = 7 * 24 * 60 * 60 * 1000; // 送れないまま7日たった写真は送らない（圏外で撮って翌朝開く等は送る）
 
 function getOcrAutoSetting() {
@@ -2667,7 +2668,7 @@ async function pollOcrResults() {
         setLocal(OCR_PENDING_KEY, JSON.stringify(latest));
         return true;
       };
-      if (!job || !job.fileId || Date.now() - (job.at || 0) > OCR_GIVE_UP_MS) {
+      if (!job || !job.fileId) {
         removeIfSame();
         if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
         continue;
@@ -2680,6 +2681,10 @@ async function pollOcrResults() {
       }
       if (res.state === "読取済" || res.state === "読取不可") {
         if (removeIfSame()) await applyOcrResult(dateKey, slot, res.state === "読取済" ? res.read : null);
+      } else if (Date.now() - (job.at || 0) > OCR_GIVE_UP_MS) {
+        // 期限を過ぎても、諦める前に一度は結果を見に行く（アプリを閉じている間に読み終わっていることがあるため）
+        removeIfSame();
+        if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
       }
     }
   } finally {
