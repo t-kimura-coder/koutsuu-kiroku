@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 60;
+const APP_VERSION = 61;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を消した直後に前の写真の数字が入ることがある・読み取りを切った状態で撮り直すと前の写真の数字が入る・前回の終了写真が二重に送られることがある）" },
   { date: "2026-10-25", type: "fix", text: "写真を削除したときや「前回の終了写真を使う」に差し替えたときは、前の写真の読み取りを取り消すようにしました（消した写真の数字が後から入らないように）" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取り結果を、アプリを長く閉じていても受け取れるようにしました（3時間で諦めていたのを24時間に。期限が過ぎても一度は結果を見に行きます）" },
   { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を続けて撮ると読み取りが抜けることがある・撮り直し前の写真の数字が入ることがある・前回の終了距離が写真の読み違いで置き換わる・自動バックアップが「送信済み」扱いになる・圏外で撮った写真が翌日送られない）" },
@@ -2496,7 +2497,10 @@ function refreshOcrHints(dateKey) {
 // 写真を撮った直後に呼ぶ。設定が有効で、スプレッドシート送信が設定済みのときだけ動く。
 // まず「送信待ち」に入れてから送る。撮ってすぐアプリを閉じても、次に開いたときに送られる
 async function startOcrForSlot(dateKey, slot, blob) {
-  if (!getOcrAutoSetting() || !isGasConfigured() || !blob) return;
+  if (!getOcrAutoSetting() || !isGasConfigured() || !blob) {
+    cancelOcrForSlot(dateKey, slot); // 読み取りを切っていても、撮り直す前の写真の数字は入れない
+    return;
+  }
   const key = `${dateKey}|${slot}`;
   const input = slot === "start" ? startInput : endInput;
   const typed = currentDetailDate === dateKey && input.value !== "" ? parseFloat(input.value) : null;
@@ -2592,10 +2596,12 @@ async function processOcrQueue() {
           pending[key] = { fileId: res.fileId, at: Date.now() };
           setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
         }
-        // 送信ボタンのときに同じ写真を送り直さないよう、送った印も付ける
-        const uploaded = getUploadedPhotos();
-        uploaded[key] = blob.size;
-        setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
+        // 送信ボタンのときに同じ写真を送り直さないよう、送った印も付ける（差し替え・削除された写真の印は付けない）
+        if (isStillSameJob(key, job)) {
+          const uploaded = getUploadedPhotos();
+          uploaded[key] = blob.size;
+          setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
+        }
         drop();
       } catch (e) {
         console.warn("ocr upload failed", key, e);
@@ -3379,13 +3385,13 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
   saveOriginalStartBtn.hidden = true;
   detailDirty = true;
   refreshPhotoPreview("start");
+  cancelOcrForSlot(targetDate, "start"); // 差し替える前の写真の読み取りは捨てる（保存を待つ間に数字が入らないよう先に）
   await saveDetailWithErrorAlert();
   // 前回の終了写真のコピーは、前回の終了分としてすでに送られる（送られた）ものなので、
   // この日の開始写真としては送らない（同じ写真が2枚届くのを防ぐ）。撮り直せばサイズが変わるので送られる
   const uploaded = getUploadedPhotos();
   uploaded[`${targetDate}|start`] = copy.size;
   setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
-  cancelOcrForSlot(targetDate, "start"); // 差し替える前の写真の読み取りは捨てる
 });
 photoChoiceCancelBtn.addEventListener("click", () => {
   pendingSlot = null;
@@ -3488,8 +3494,8 @@ removePhotoStartBtn.addEventListener("click", async (ev) => {
   detailDirty = true;
   saveOriginalStartBtn.hidden = true;
   refreshPhotoPreview("start");
+  if (dateKey) cancelOcrForSlot(dateKey, "start"); // 保存を待つ間に結果が届いて欄に入らないよう、先に取り消す
   await saveDetailWithErrorAlert();
-  if (dateKey) cancelOcrForSlot(dateKey, "start");
 });
 
 removePhotoEndBtn.addEventListener("click", async (ev) => {
@@ -3501,8 +3507,8 @@ removePhotoEndBtn.addEventListener("click", async (ev) => {
   detailDirty = true;
   saveOriginalEndBtn.hidden = true;
   refreshPhotoPreview("end");
+  if (dateKey) cancelOcrForSlot(dateKey, "end"); // 保存を待つ間に結果が届いて欄に入らないよう、先に取り消す
   await saveDetailWithErrorAlert();
-  if (dateKey) cancelOcrForSlot(dateKey, "end");
 });
 
 async function saveDetailAndToast() {
