@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 53;
+const APP_VERSION = 54;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "写真の読み取りで「送るデータが大きすぎます」になるのを直しました。写真を撮ってすぐアプリを閉じても、次に開いたときに送られるようにしました" },
   { date: "2026-10-25", type: "feature", text: "オプションに「定休日」を追加しました。選んだ曜日は、記録を開いても前回の終了距離が開始距離に自動で入りません" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取りで、電波が弱いと「写真を送れませんでした」になりやすかったのを直しました（待ち時間を延ばし、1回やり直すようにしました）" },
   { date: "2026-10-25", type: "feature", text: "設定に「写真から数字を読み取る（試験中）」を追加しました。有効にすると、メーター写真を撮ったあと数分で、読み取れた数字が始針・終針の欄に入ります（必ず写真と見比べてください）" },
@@ -2282,7 +2283,10 @@ function getUploadedPhotos() {
   }
 }
 
-// JPEG(幅1280px以下)に縮めて、base64（data: の前置きなし）で返す
+// JPEG に縮めて base64（data: の前置きなし）で返す。GAS が受け取れる大きさ（base64 で 650KB）に
+// 収まるまで、画質 → 幅 の順に落とす（iPhone の細かい写真は 1280px でも 700KB を超えることがある）
+const PHOTO_UPLOAD_MAX_B64 = 650000;
+
 async function shrinkPhotoForUpload(blob) {
   const url = URL.createObjectURL(blob);
   try {
@@ -2292,13 +2296,26 @@ async function shrinkPhotoForUpload(blob) {
       el.onerror = () => reject(new Error("写真を読み込めません"));
       el.src = url;
     });
-    const scale = Math.min(1, PHOTO_UPLOAD_MAX_WIDTH / img.naturalWidth);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    return dataUrl.slice(dataUrl.indexOf(",") + 1);
+    const tries = [
+      [PHOTO_UPLOAD_MAX_WIDTH, 0.8],
+      [PHOTO_UPLOAD_MAX_WIDTH, 0.7],
+      [PHOTO_UPLOAD_MAX_WIDTH, 0.6],
+      [1024, 0.7],
+      [896, 0.7],
+      [768, 0.65],
+    ];
+    let last = "";
+    for (const [maxW, quality] of tries) {
+      const scale = Math.min(1, maxW / img.naturalWidth);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      last = dataUrl.slice(dataUrl.indexOf(",") + 1);
+      if (last.length <= PHOTO_UPLOAD_MAX_B64) break;
+    }
+    return last;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -2359,7 +2376,8 @@ async function uploadPeriodPhotos(payload, name, email) {
    20秒おきに取りに行く。数字が届いたら、欄が空ならそのまま入れて「要確認」と案内し、
    すでに別の数字が入っていれば上書きせずに「写真の数字」として並べて見せる */
 const OCR_AUTO_KEY = "koutsuu-kiroku-ocr-auto";
-const OCR_PENDING_KEY = "koutsuu-kiroku-ocr-pending"; // {"日付|区分": {fileId, at}}
+const OCR_QUEUE_KEY = "koutsuu-kiroku-ocr-queue"; // {"日付|区分": {at, typed}} 送信待ちの写真
+const OCR_PENDING_KEY = "koutsuu-kiroku-ocr-pending"; // {"日付|区分": {fileId, at}} 預けて読み取り待ち
 const OCR_RESULT_KEY = "koutsuu-kiroku-ocr-result"; // {"日付|区分": {read, at}} 読めなかったときは read: null
 const OCR_POLL_MS = 20000;
 const OCR_GIVE_UP_MS = 3 * 60 * 60 * 1000; // 3時間たっても読まれなければ諦める（PCが止まっている等）
@@ -2389,12 +2407,17 @@ function showOcrHint(slot, text, cls) {
 
 // 開いている日の、読み取りの状態を欄の下に出す（openDetail から呼ぶ）
 function refreshOcrHints(dateKey) {
+  const queue = readJsonLocal(OCR_QUEUE_KEY);
   const pending = readJsonLocal(OCR_PENDING_KEY);
   const results = readJsonLocal(OCR_RESULT_KEY);
   for (const slot of ["start", "end"]) {
     const key = `${dateKey}|${slot}`;
     const input = slot === "start" ? startInput : endInput;
-    if (pending[key]) {
+    if (queue[key] && ocrLastError[key]) {
+      showOcrHint(slot, `写真を送れませんでした: ${ocrLastError[key]}（次にアプリを開いたときに送り直します）`, "isWaiting");
+    } else if (queue[key]) {
+      showOcrHint(slot, "写真を送っています…", "isWaiting");
+    } else if (pending[key]) {
       showOcrHint(slot, "写真を読み取り中…（数分かかることがあります）", "isWaiting");
     } else if (results[key] && results[key].read == null) {
       showOcrHint(slot, "写真から数字を読み取れませんでした", "isWaiting");
@@ -2408,43 +2431,94 @@ function refreshOcrHints(dateKey) {
   }
 }
 
-// 写真を撮った直後に呼ぶ。設定が有効で、スプレッドシート送信が設定済みのときだけ動く
+// 写真を撮った直後に呼ぶ。設定が有効で、スプレッドシート送信が設定済みのときだけ動く。
+// まず「送信待ち」に入れてから送る。撮ってすぐアプリを閉じても、次に開いたときに送られる
 async function startOcrForSlot(dateKey, slot, blob) {
   if (!getOcrAutoSetting() || !isGasConfigured() || !blob) return;
-  const name = getUserName();
-  if (!name) return;
   const key = `${dateKey}|${slot}`;
   const input = slot === "start" ? startInput : endInput;
   const typed = currentDetailDate === dateKey && input.value !== "" ? parseFloat(input.value) : null;
-  if (currentDetailDate === dateKey) showOcrHint(slot, "写真を送っています…", "isWaiting");
+  const queue = readJsonLocal(OCR_QUEUE_KEY);
+  queue[key] = { at: Date.now(), typed };
+  setLocal(OCR_QUEUE_KEY, JSON.stringify(queue));
+  const results = readJsonLocal(OCR_RESULT_KEY);
+  delete results[key];
+  setLocal(OCR_RESULT_KEY, JSON.stringify(results));
+  if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+  processOcrQueue();
+}
+
+let ocrQueueRunning = false;
+
+// 送信待ちの写真を1枚ずつ GAS へ預ける（アプリを開いたとき・画面に戻ったときにも呼ぶ）
+async function processOcrQueue() {
+  if (ocrQueueRunning || !isGasConfigured() || document.visibilityState !== "visible") return;
+  const queue = readJsonLocal(OCR_QUEUE_KEY);
+  const keys = Object.keys(queue);
+  if (!keys.length) return;
+  const name = getUserName();
+  if (!name) return;
+  ocrQueueRunning = true;
   try {
-    const image = await shrinkPhotoForUpload(blob);
-    const body = { name, email: getLocal(GAS_EMAIL_KEY), date: dateKey, slot, value: typed, image };
-    let res;
-    try {
-      res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
-    } catch (e) {
-      // 電波の揺れで1回落ちることがあるので、少し待って1回だけやり直す
-      await new Promise((r) => setTimeout(r, 3000));
-      res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
+    for (const key of keys) {
+      const job = queue[key];
+      const [dateKey, slot] = key.split("|");
+      const drop = () => {
+        delete queue[key];
+        setLocal(OCR_QUEUE_KEY, JSON.stringify(queue));
+        if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+      };
+      if (!job || Date.now() - (job.at || 0) > OCR_GIVE_UP_MS) {
+        drop();
+        continue;
+      }
+      let blob;
+      try {
+        blob = await getImage(dateKey, slot);
+      } catch (e) {
+        blob = null;
+      }
+      if (!blob) {
+        drop(); // 写真が消されていれば送るものが無い
+        continue;
+      }
+      try {
+        const image = await shrinkPhotoForUpload(blob);
+        const body = { name, email: getLocal(GAS_EMAIL_KEY), date: dateKey, slot, value: job.typed, image };
+        let res;
+        try {
+          res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
+        } catch (e) {
+          // 電波の揺れで1回落ちることがあるので、少し待って1回だけやり直す
+          await new Promise((r) => setTimeout(r, 3000));
+          res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
+        }
+        const pending = readJsonLocal(OCR_PENDING_KEY);
+        pending[key] = { fileId: res.fileId, at: Date.now() };
+        setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+        // 送信ボタンのときに同じ写真を送り直さないよう、送った印も付ける
+        const uploaded = getUploadedPhotos();
+        uploaded[key] = blob.size;
+        setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
+        drop();
+      } catch (e) {
+        console.warn("ocr upload failed", key, e);
+        ocrLastError[key] = e.message;
+        if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+        if (/大きすぎ/.test(e.message)) {
+          drop(); // 縮めても入らない写真はこれ以上やり直さない
+          continue;
+        }
+        break; // 通信の失敗は次の機会に（残りも同じ結果になりやすい）
+      }
     }
-    const pending = readJsonLocal(OCR_PENDING_KEY);
-    pending[key] = { fileId: res.fileId, at: Date.now() };
-    setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
-    const results = readJsonLocal(OCR_RESULT_KEY);
-    delete results[key];
-    setLocal(OCR_RESULT_KEY, JSON.stringify(results));
-    // 送信ボタンのときに同じ写真を送り直さないよう、送った印も付ける
-    const uploaded = getUploadedPhotos();
-    uploaded[key] = blob.size;
-    setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
-    if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+  } finally {
+    ocrQueueRunning = false;
     pollOcrResults();
-  } catch (e) {
-    console.warn("ocr upload failed", key, e);
-    if (currentDetailDate === dateKey) showOcrHint(slot, `写真を送れませんでした: ${e.message}（送信ボタンのときに送り直します）`, "isWaiting");
   }
 }
+
+const ocrLastError = {}; // {"日付|区分": 直近の送信失敗の理由}（画面の案内用、保存はしない）
 
 // 読み取り結果を欄や記録に入れる
 async function applyOcrResult(dateKey, slot, read) {
@@ -2524,8 +2598,9 @@ async function pollOcrResults() {
 
 setInterval(pollOcrResults, OCR_POLL_MS);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") pollOcrResults();
+  if (document.visibilityState === "visible") processOcrQueue();
 });
+processOcrQueue(); // 起動時：撮ってすぐ閉じた写真が残っていれば送る
 
 ocrAutoCheckbox.addEventListener("change", () => {
   setOcrAutoSetting(ocrAutoCheckbox.checked);
