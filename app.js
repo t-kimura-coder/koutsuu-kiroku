@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 54;
+const APP_VERSION = 55;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "「前回の終了写真を使う」で入れた開始写真は、同じ写真が2枚届かないよう送らないようにしました" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取りで「送るデータが大きすぎます」になるのを直しました。写真を撮ってすぐアプリを閉じても、次に開いたときに送られるようにしました" },
   { date: "2026-10-25", type: "feature", text: "オプションに「定休日」を追加しました。選んだ曜日は、記録を開いても前回の終了距離が開始距離に自動で入りません" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取りで、電波が弱いと「写真を送れませんでした」になりやすかったのを直しました（待ち時間を延ばし、1回やり直すようにしました）" },
@@ -3268,6 +3269,11 @@ photoChoicePrevDayBtn.addEventListener("click", async () => {
   detailDirty = true;
   refreshPhotoPreview("start");
   await saveDetailWithErrorAlert();
+  // 前回の終了写真のコピーは、前回の終了分としてすでに送られる（送られた）ものなので、
+  // この日の開始写真としては送らない（同じ写真が2枚届くのを防ぐ）。撮り直せばサイズが変わるので送られる
+  const uploaded = getUploadedPhotos();
+  uploaded[`${targetDate}|start`] = copy.size;
+  setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
 });
 photoChoiceCancelBtn.addEventListener("click", () => {
   pendingSlot = null;
