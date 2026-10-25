@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 57;
+const APP_VERSION = 58;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を続けて撮ると読み取りが抜けることがある・撮り直し前の写真の数字が入ることがある・前回の終了距離が写真の読み違いで置き換わる・自動バックアップが「送信済み」扱いになる・圏外で撮った写真が翌日送られない）" },
   { date: "2026-10-25", type: "fix", text: "写真から入った数字の案内は、「確認した」を押すか自分で打ち替えるまで残り、欄を空にすると消えるようにしました" },
   { date: "2026-10-25", type: "feature", text: "写真の読み取りで、写真の下に「送信中 → 送信済み・受け取り中 → 受け取りました」と進み具合が出るようにしました" },
   { date: "2026-10-25", type: "fix", text: "「前回の終了写真を使う」で入れた開始写真は、同じ写真が2枚届かないよう送らないようにしました" },
@@ -2228,12 +2229,15 @@ async function submitPeriodToGas(start, { silent = false } = {}) {
     }
     const email = getLocal(GAS_EMAIL_KEY);
     const res = await gasRequest("submitPeriod", { ...payload, email });
-    let log = {};
-    try {
-      log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}");
-    } catch (e) {}
-    log[payload.periodStart] = { at: Date.now(), added: res.added, updated: res.updated, removed: res.removed };
-    setLocal(GAS_SENT_KEY, JSON.stringify(log));
+    // 自動バックアップ（silent）は「提出した」扱いにしない（先月分の確認や送る期間の初期値がずれるため）
+    if (!silent) {
+      let log = {};
+      try {
+        log = JSON.parse(getLocal(GAS_SENT_KEY) || "{}");
+      } catch (e) {}
+      log[payload.periodStart] = { at: Date.now(), added: res.added, updated: res.updated, removed: res.removed };
+      setLocal(GAS_SENT_KEY, JSON.stringify(log));
+    }
     updateGasStatus();
     if (res.personal && typeof res.personal.url === "string" && res.personal.url.startsWith(GAS_PERSONAL_URL_PREFIX)) {
       setLocal(GAS_PERSONAL_URL_KEY, res.personal.url);
@@ -2385,7 +2389,8 @@ const OCR_QUEUE_KEY = "koutsuu-kiroku-ocr-queue"; // {"日付|区分": {at, type
 const OCR_PENDING_KEY = "koutsuu-kiroku-ocr-pending"; // {"日付|区分": {fileId, at}} 預けて読み取り待ち
 const OCR_RESULT_KEY = "koutsuu-kiroku-ocr-result"; // {"日付|区分": {read, at}} 読めなかったときは read: null
 const OCR_POLL_MS = 20000;
-const OCR_GIVE_UP_MS = 3 * 60 * 60 * 1000; // 3時間たっても読まれなければ諦める（PCが止まっている等）
+const OCR_GIVE_UP_MS = 3 * 60 * 60 * 1000; // 預けてから3時間たっても読まれなければ諦める（PCが止まっている等）
+const OCR_QUEUE_GIVE_UP_MS = 7 * 24 * 60 * 60 * 1000; // 送れないまま7日たった写真は送らない（圏外で撮って翌朝開く等は送る）
 
 function getOcrAutoSetting() {
   return getLocal(OCR_AUTO_KEY) === "1";
@@ -2499,6 +2504,12 @@ async function startOcrForSlot(dateKey, slot, blob) {
   const results = readJsonLocal(OCR_RESULT_KEY);
   delete results[key];
   setLocal(OCR_RESULT_KEY, JSON.stringify(results));
+  // 撮り直したときは、前の写真の読み取り待ちを捨てる（前の写真の数字が新しい写真の数字として入らないように）
+  const pending = readJsonLocal(OCR_PENDING_KEY);
+  if (pending[key]) {
+    delete pending[key];
+    setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+  }
   if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
   processOcrQueue();
 }
@@ -2514,16 +2525,26 @@ async function processOcrQueue() {
   const name = getUserName();
   if (!name) return;
   ocrQueueRunning = true;
+  let stoppedByError = false;
+  // 送っている間に撮られた写真（別の日・撮り直し）は、送信待ちに新しく入っている
+  const isStillSameJob = (key, job) => {
+    const latest = readJsonLocal(OCR_QUEUE_KEY)[key];
+    return !!latest && !!job && latest.at === job.at;
+  };
   try {
     for (const key of keys) {
       const job = queue[key];
       const [dateKey, slot] = key.split("|");
+      // 保存し直されている最新の送信待ちを読み直して、この写真の分だけ消す（後から入った写真を消さない）
       const drop = () => {
-        delete queue[key];
-        setLocal(OCR_QUEUE_KEY, JSON.stringify(queue));
+        const latest = readJsonLocal(OCR_QUEUE_KEY);
+        if (latest[key] && (!job || latest[key].at === job.at)) {
+          delete latest[key];
+          setLocal(OCR_QUEUE_KEY, JSON.stringify(latest));
+        }
         if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
       };
-      if (!job || Date.now() - (job.at || 0) > OCR_GIVE_UP_MS) {
+      if (!job || Date.now() - (job.at || 0) > OCR_QUEUE_GIVE_UP_MS) {
         drop();
         continue;
       }
@@ -2548,9 +2569,12 @@ async function processOcrQueue() {
           await new Promise((r) => setTimeout(r, 3000));
           res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
         }
-        const pending = readJsonLocal(OCR_PENDING_KEY);
-        pending[key] = { fileId: res.fileId, at: Date.now() };
-        setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+        // 送っている間に撮り直されていたら、古い写真の読み取りは待たない（新しい写真が次に送られる）
+        if (isStillSameJob(key, job)) {
+          const pending = readJsonLocal(OCR_PENDING_KEY);
+          pending[key] = { fileId: res.fileId, at: Date.now() };
+          setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+        }
         // 送信ボタンのときに同じ写真を送り直さないよう、送った印も付ける
         const uploaded = getUploadedPhotos();
         uploaded[key] = blob.size;
@@ -2564,12 +2588,18 @@ async function processOcrQueue() {
           drop(); // 縮めても入らない写真はこれ以上やり直さない
           continue;
         }
+        stoppedByError = true;
         break; // 通信の失敗は次の機会に（残りも同じ結果になりやすい）
       }
     }
   } finally {
     ocrQueueRunning = false;
-    pollOcrResults();
+    // 送っている間に新しく入った写真があれば、続けて送る
+    if (!stoppedByError && Object.keys(readJsonLocal(OCR_QUEUE_KEY)).length) {
+      setTimeout(processOcrQueue, 0);
+    } else {
+      pollOcrResults();
+    }
   }
 }
 
@@ -2587,9 +2617,9 @@ async function applyOcrResult(dateKey, slot, read) {
   }
   if (currentDetailDate === dateKey && !detailView.hidden && !detailLoading) {
     const input = slot === "start" ? startInput : endInput;
-    // 開始距離は「前回の終了距離」が自動で入っていることがあるので、その場合も写真の数字で置き換える
-    const autoFilled = slot === "start" && previousDayEnd != null && parseFloat(input.value) === previousDayEnd;
-    if (input.value === "" || autoFilled) {
+    // 欄が空のときだけ入れる。開始距離に「前回の終了距離」が入っている場合は、そちらの方が確かなので
+    // 置き換えず、違えば「欄と違います」の案内で知らせる（読み違いで正しい数字を消さないため）
+    if (input.value === "") {
       input.value = String(read);
       detailDirty = true;
       updateSummary();
@@ -2628,9 +2658,17 @@ async function pollOcrResults() {
     for (const key of keys) {
       const job = pending[key];
       const [dateKey, slot] = key.split("|");
+      // 待っている間に別の写真の読み取り待ちが入ることがあるので、最新を読み直して、この写真の分だけ消す
+      // （撮り直しで別の写真に変わっていたら false）
+      const removeIfSame = () => {
+        const latest = readJsonLocal(OCR_PENDING_KEY);
+        if (!latest[key] || (job && latest[key].fileId !== job.fileId)) return false;
+        delete latest[key];
+        setLocal(OCR_PENDING_KEY, JSON.stringify(latest));
+        return true;
+      };
       if (!job || !job.fileId || Date.now() - (job.at || 0) > OCR_GIVE_UP_MS) {
-        delete pending[key];
-        setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+        removeIfSame();
         if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
         continue;
       }
@@ -2641,9 +2679,7 @@ async function pollOcrResults() {
         break; // 電波が無いときは次の機会に
       }
       if (res.state === "読取済" || res.state === "読取不可") {
-        delete pending[key];
-        setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
-        await applyOcrResult(dateKey, slot, res.state === "読取済" ? res.read : null);
+        if (removeIfSame()) await applyOcrResult(dateKey, slot, res.state === "読取済" ? res.read : null);
       }
     }
   } finally {
