@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=36">
+<link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 
@@ -302,6 +302,7 @@
         <button id="gasSendBtn" class="ghostBtn"><span class="inlineIcon" id="gasSendIcon"></span>選んだ期間をスプレッドシートへ送る</button>
         <button id="gasBoxBackupBtn" class="ghostBtn"><span class="inlineIcon" id="gasBoxBackupIcon"></span>Box用ファイルを共有（予備）</button>
         <div id="gasStatusText" class="exportHint"></div>
+        <button id="openMonthlyGuideBtn" class="ghostBtn" type="button">月次送信の手順を見る</button>
         <a id="gasPersonalLink" class="gasPersonalLink" href="#" target="_blank" rel="noopener" hidden>あなた専用のスプレッドシートを開く（内容の確認・PDF印刷）</a>
       </div>
 
@@ -504,10 +505,37 @@
       <p class="guideText">「本社→現場A→会社」のように矢印区切りで入力すると、地点ごとに履歴として残り、次回以降チップから選んで再利用できます。不要な履歴はチップの✕で削除できます。</p>
       <img class="guideImg" src="guide/guide-dest.png" alt="行き先入力欄と履歴チップ">
     </div>
-    <div class="guideSection">
-      <h3 class="guideHeading">月次送信</h3>
-      <p class="guideText">ホームまたは記録一覧の「送信」ボタンから、その締め期間分をまとめてメールで送信できます。送信先アドレスはその他設定であらかじめ登録してください。</p>
-      <img class="guideImg" src="guide/guide-send.png" alt="今月分をメールで送信ボタン">
+    <div class="guideSection" id="guideMonthly">
+      <h3 class="guideHeading">月次送信の手順</h3>
+      <p class="guideText">締めは毎月15日です。16日になったら、前の期間（16日〜15日）の記録をスプレッドシートへ送り、あなた専用のシートから印刷して経理へ提出します。</p>
+
+      <h4 class="guideSubHeading">はじめに1回だけ準備すること</h4>
+      <ol class="guideSteps">
+        <li><b>氏名を入れる</b>（車両管理 → 氏名）。表紙に印刷されます</li>
+        <li><b>車両の情報を入れる</b>（車両管理 → 年式・車種・排気量）。表紙に印刷されます</li>
+        <li><b>設定リンクを貼る</b>（その他 → スプレッドシート送信 → 設定リンクの貼り付け）。リンクは管理者から届きます。ホーム画面に追加したアプリの中で貼ってください</li>
+        <li><b>会社のメールアドレスを入れる</b>（@kk35.jp）。あなた専用のシートが、このアドレスに共有されます</li>
+        <li><b>「接続テスト」を押す</b>。「接続できました」と出ればOKです</li>
+      </ol>
+
+      <h4 class="guideSubHeading">毎月やること（16日以降）</h4>
+      <ol class="guideSteps">
+        <li><b>15日までの記録を見直す</b>。始めか終わりの距離が空いている日は、専用シートに入りません</li>
+        <li><b>ホームの「今月分を送信」を押す</b>。先月分をまだ送っていなければ、どちらを送るか聞かれるので「先月分」を選びます</li>
+        <li><b>「送信しました」を確かめる</b>。送った件数と、距離が空いている日があればその日付が出ます</li>
+        <li><b>「専用シートを開く」で中身を確かめる</b>。表紙と明細が、いつもの様式で出来ています</li>
+        <li><b>シートの「PDF出力」タブのボタンでPDFを作る</b>。PDFはGoogleドライブにも保存されます</li>
+        <li><b>印刷して経理へ提出する</b></li>
+      </ol>
+
+      <h4 class="guideSubHeading">困ったとき</h4>
+      <ul class="guideSteps">
+        <li><b>「送れませんでした」と出た</b>：電波のよい所で、もう一度送ってください</li>
+        <li><b>「管理者の確認待ちです」と出た</b>：名前とメールがまだ登録されていません。管理者（工事部 木村）に連絡してください</li>
+        <li><b>送ったあとで記録を直した</b>：同じ期間をもう一度送れば上書きされます（その他 → 送る期間 で選んで送ることもできます）</li>
+        <li><b>中抜けのある日</b>は、今は専用シートに入りません（扱いを調整中です）</li>
+        <li>設定リンクを入れていない端末では、送信ボタンを押すとBox用のファイル共有になります</li>
+      </ul>
     </div>
     <div class="guideSection">
       <h3 class="guideHeading">データのバックアップ</h3>
@@ -555,6 +583,6 @@
   </div>
 </div>
 
-<script src="app.js?v=62"></script>
+<script src="app.js?v=63"></script>
 </body>
 </html>

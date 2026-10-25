@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 62;
+const APP_VERSION = 63;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "feature", text: "使い方ガイドに「月次送信の手順」（はじめの準備・毎月やること・困ったとき）を追加しました。その他 → スプレッドシート送信の「月次送信の手順を見る」からも開けます" },
   { date: "2026-10-25", type: "feature", text: "お知らせ一覧を「新機能」「修正」「すべて」のタブで切り替えられるようにしました（前回選んだタブを覚えます）" },
   { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を消した直後に前の写真の数字が入ることがある・読み取りを切った状態で撮り直すと前の写真の数字が入る・前回の終了写真が二重に送られることがある）" },
   { date: "2026-10-25", type: "fix", text: "写真を削除したときや「前回の終了写真を使う」に差し替えたときは、前の写真の読み取りを取り消すようにしました（消した写真の数字が後から入らないように）" },
@@ -2972,6 +2973,11 @@ openAnnounceFromOtherBtn.addEventListener("click", () => openAnnounceView("other
 announceBackBtn.addEventListener("click", closeAnnounceView);
 openGuideBtn.addEventListener("click", () => openGuideView("other"));
 homeGuideBtn.addEventListener("click", () => openGuideView("home"));
+// スプレッドシート送信の欄から、ガイドの「月次送信の手順」へ直接飛ぶ
+document.getElementById("openMonthlyGuideBtn").addEventListener("click", async () => {
+  await openGuideView("other");
+  if (!guideView.hidden) document.getElementById("guideMonthly").scrollIntoView({ block: "start" });
+});
 guideBackBtn.addEventListener("click", closeGuideView);
 
 bottomTabBtns.forEach((btn) => {
