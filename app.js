@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 56;
+const APP_VERSION = 57;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "fix", text: "写真から入った数字の案内は、「確認した」を押すか自分で打ち替えるまで残り、欄を空にすると消えるようにしました" },
   { date: "2026-10-25", type: "feature", text: "写真の読み取りで、写真の下に「送信中 → 送信済み・受け取り中 → 受け取りました」と進み具合が出るようにしました" },
   { date: "2026-10-25", type: "fix", text: "「前回の終了写真を使う」で入れた開始写真は、同じ写真が2枚届かないよう送らないようにしました" },
   { date: "2026-10-25", type: "fix", text: "写真の読み取りで「送るデータが大きすぎます」になるのを直しました。写真を撮ってすぐアプリを閉じても、次に開いたときに送られるようにしました" },
@@ -2402,11 +2403,44 @@ function readJsonLocal(key) {
   }
 }
 
-function showOcrHint(slot, text, cls) {
+// withCheck: 「確認した」ボタンを付ける（人が見るまで案内を残し、押したら消す）
+function showOcrHint(slot, text, cls, withCheck = false) {
   const el = slot === "start" ? ocrHintStart : ocrHintEnd;
   el.className = "ocrHint" + (cls ? ` ${cls}` : "");
   el.textContent = text || "";
+  if (text && withCheck) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ocrCheckBtn";
+    btn.textContent = "確認した";
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      markOcrChecked(slot);
+    });
+    el.appendChild(btn);
+  }
   el.hidden = !text;
+}
+
+// 読み取った数字を人が見たことにする（案内を消す）。欄を自分で打ち替えたときも同じ扱い
+function markOcrChecked(slot) {
+  if (!currentDetailDate) return;
+  const key = `${currentDetailDate}|${slot}`;
+  const results = readJsonLocal(OCR_RESULT_KEY);
+  if (results[key]) {
+    results[key].checked = true;
+    setLocal(OCR_RESULT_KEY, JSON.stringify(results));
+  }
+  refreshOcrHints(currentDetailDate);
+}
+
+// 欄を人が触ったら：空にしたら案内を消す、数字を入れ直したら確認済みにする
+for (const [slot, input] of [["start", startInput], ["end", endInput]]) {
+  input.addEventListener("input", () => {
+    if (!currentDetailDate) return;
+    if (input.value !== "") markOcrChecked(slot);
+    else refreshOcrHints(currentDetailDate);
+  });
 }
 
 // 写真の下に出す進み具合（送信中 → 送信済み・数字を受け取り中 → 受け取り済み）
@@ -2434,16 +2468,18 @@ function refreshOcrHints(dateKey) {
     } else if (pending[key]) {
       showPhotoStatus(slot, "送信済み・数字を受け取り中…（閉じてOK）", "isBusy");
       showOcrHint(slot, "読み取りには数分かかります", "isWaiting");
-    } else if (results[key] && results[key].read == null) {
+    } else if (results[key] && results[key].read == null && !results[key].checked) {
       showPhotoStatus(slot, "送信済み・数字は読めませんでした", "isError");
       showOcrHint(slot, "写真から数字を読み取れませんでした。手で入れてください", "isWaiting");
-    } else if (results[key] && input.value !== "" && parseFloat(input.value) === results[key].read) {
+    } else if (results[key] && results[key].read != null && !results[key].checked && input.value !== "" && parseFloat(input.value) === results[key].read) {
+      // 人が見るまで残す（「確認した」を押すか、欄を自分で打ち替えると消える）
       showPhotoStatus(slot, "数字を受け取りました", "isDone");
-      showOcrHint(slot, "写真から読み取った数字です。写真と見比べてください");
-    } else if (results[key] && input.value !== "") {
+      showOcrHint(slot, "写真から読み取った数字です。写真と見比べてください", "", true);
+    } else if (results[key] && results[key].read != null && !results[key].checked && input.value !== "") {
       showPhotoStatus(slot, "数字を受け取りました", "isDone");
-      showOcrHint(slot, `写真の数字は ${results[key].read} と読めました（欄と違います）`, "isDiff");
+      showOcrHint(slot, `写真の数字は ${results[key].read} と読めました（欄と違います）`, "isDiff", true);
     } else {
+      // 確認済み・欄を空にした・結果なし → 何も出さない
       showPhotoStatus(slot, "");
       showOcrHint(slot, "");
     }
