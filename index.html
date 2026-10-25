@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 
@@ -172,6 +172,11 @@
           <span class="checkboxDesc">撮影時に、圧縮前の元画像も端末の写真アプリへ保存します</span>
         </span>
       </label>
+      <div class="field">
+        <span>定休日</span>
+        <div id="holidayWeekdays" class="weekdayPicker"></div>
+        <span class="checkboxDesc">この曜日は、記録を開いても「前回の終了距離」を開始距離に自動で入れません（休みの日に覗いただけで数字が入るのを防ぎます）</span>
+      </div>
       <label class="checkboxField">
         <input type="checkbox" id="showReminderCheckbox">
         <span class="checkboxLabelText">
@@ -543,6 +548,6 @@
   </div>
 </div>
 
-<script src="app.js?v=52"></script>
+<script src="app.js?v=53"></script>
 </body>
 </html>

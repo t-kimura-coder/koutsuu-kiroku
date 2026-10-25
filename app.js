@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 52;
+const APP_VERSION = 53;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,8 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "feature", text: "オプションに「定休日」を追加しました。選んだ曜日は、記録を開いても前回の終了距離が開始距離に自動で入りません" },
+  { date: "2026-10-25", type: "fix", text: "写真の読み取りで、電波が弱いと「写真を送れませんでした」になりやすかったのを直しました（待ち時間を延ばし、1回やり直すようにしました）" },
   { date: "2026-10-25", type: "feature", text: "設定に「写真から数字を読み取る（試験中）」を追加しました。有効にすると、メーター写真を撮ったあと数分で、読み取れた数字が始針・終針の欄に入ります（必ず写真と見比べてください）" },
   { date: "2026-10-25", type: "feature", text: "スプレッドシートへ送ったあと、その期間のメーター写真も裏で送るようにしました（写真から数字を読み取る仕組みの準備です。操作は変わりません）" },
   { date: "2026-10-23", type: "feature", text: "ホームの「今月分を送信」で、先月分がまだ送られていないときは「先月分・今月分のどちらを送るか」を聞くようにしました（20日を過ぎても先月分を送れます）" },
@@ -924,6 +926,53 @@ function setLastAutoBackupAt(timestamp) {
 
 /* ---------- ホームのリマインダー表示設定 ---------- */
 
+/* ---------- 定休日 ----------
+   定休日に当たる日の記録を開いても、「前回の終了距離」を開始距離に自動で入れない
+   （休みの日に記録画面を覗いただけで数字が入り、記録したつもりのない日ができるのを防ぐ） */
+const HOLIDAY_WEEKDAYS_KEY = "koutsuu-kiroku-holiday-weekdays"; // 曜日番号の配列 [0=日 … 6=土]
+
+function getHolidayWeekdays() {
+  try {
+    const v = JSON.parse(localStorage.getItem(HOLIDAY_WEEKDAYS_KEY) || "[]");
+    return Array.isArray(v) ? v.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function setHolidayWeekdays(days) {
+  try {
+    localStorage.setItem(HOLIDAY_WEEKDAYS_KEY, JSON.stringify(days));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function isHoliday(dateObj) {
+  return getHolidayWeekdays().includes(dateObj.getDay());
+}
+
+function renderHolidayPicker() {
+  const picked = getHolidayWeekdays();
+  holidayWeekdays.innerHTML = "";
+  WEEKDAY_JP.forEach((label, day) => {
+    const lab = document.createElement("label");
+    lab.className = "weekdayPick" + (day === 0 ? " isSun" : day === 6 ? " isSat" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = picked.includes(day);
+    cb.addEventListener("change", () => {
+      const now = getHolidayWeekdays().filter((d) => d !== day);
+      if (cb.checked) now.push(day);
+      setHolidayWeekdays(now.sort());
+      showSavedToast();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(label));
+    holidayWeekdays.appendChild(lab);
+  });
+}
+
 const SHOW_REMINDER_KEY = "koutsuu-kiroku-show-reminder";
 
 function getShowReminderSetting() {
@@ -1068,6 +1117,7 @@ const gasTestBtn = document.getElementById("gasTestBtn");
 const gasSendBtn = document.getElementById("gasSendBtn");
 const gasBoxBackupBtn = document.getElementById("gasBoxBackupBtn");
 const ocrAutoCheckbox = document.getElementById("ocrAutoCheckbox");
+const holidayWeekdays = document.getElementById("holidayWeekdays");
 const ocrHintStart = document.getElementById("ocrHintStart");
 const ocrHintEnd = document.getElementById("ocrHintEnd");
 const gasStatusText = document.getElementById("gasStatusText");
@@ -1391,8 +1441,9 @@ async function openDetail(dateKey) {
     preCommuteDestination = ""; // 前に開いていた日の行き先が別の日に紛れ込まないようにする
     applyCommuteOnlyState();
     renderDestHistoryChips();
+    // 定休日は「前回の終了距離」を自動で入れない（開いただけで記録ができてしまうのを防ぐ）
     startInput.value =
-      rec && rec.start != null ? rec.start : previousDayEnd != null ? previousDayEnd : "";
+      rec && rec.start != null ? rec.start : previousDayEnd != null && !isHoliday(dateObj) ? previousDayEnd : "";
     endInput.value = rec && rec.end != null ? rec.end : "";
     breakCheckbox.checked = !!(rec && rec.hasBreak);
     breakFieldRow.hidden = !breakCheckbox.checked;
@@ -2001,12 +2052,13 @@ function updateGasStatus() {
   setGasStatus(`前回の送信: ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}（${latest[0].slice(5).replace("-", "/")}始まりの期間）`);
 }
 
-async function gasRequest(action, extra = {}) {
+// timeoutMs: 写真のように大きいものを送るときは長めにする（携帯回線で30秒だと間に合わないことがある）
+async function gasRequest(action, extra = {}, { timeoutMs = 30000 } = {}) {
   const url = getLocal(GAS_URL_KEY);
   const token = getLocal(GAS_TOKEN_KEY);
   if (!url || !token) throw new Error("受け口のURLと合言葉を入れてください");
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 30000);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     // text/plain にすると事前確認(プリフライト)が要らず、GASが受け取れる
     const res = await fetch(url, {
@@ -2283,7 +2335,7 @@ async function uploadPeriodPhotos(payload, name, email) {
         }
         setGasStatus(`写真を送っています ${i + 1}/${jobs.length}`);
         const image = await shrinkPhotoForUpload(blob);
-        await gasRequest("uploadPhoto", { name, email, date: job.date, slot: job.slot, value: job.value, image });
+        await gasRequest("uploadPhoto", { name, email, date: job.date, slot: job.slot, value: job.value, image }, { timeoutMs: 90000 });
         uploaded[key] = blob.size;
         setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
         sent++;
@@ -2367,7 +2419,15 @@ async function startOcrForSlot(dateKey, slot, blob) {
   if (currentDetailDate === dateKey) showOcrHint(slot, "写真を送っています…", "isWaiting");
   try {
     const image = await shrinkPhotoForUpload(blob);
-    const res = await gasRequest("uploadPhoto", { name, email: getLocal(GAS_EMAIL_KEY), date: dateKey, slot, value: typed, image });
+    const body = { name, email: getLocal(GAS_EMAIL_KEY), date: dateKey, slot, value: typed, image };
+    let res;
+    try {
+      res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
+    } catch (e) {
+      // 電波の揺れで1回落ちることがあるので、少し待って1回だけやり直す
+      await new Promise((r) => setTimeout(r, 3000));
+      res = await gasRequest("uploadPhoto", body, { timeoutMs: 90000 });
+    }
     const pending = readJsonLocal(OCR_PENDING_KEY);
     pending[key] = { fileId: res.fileId, at: Date.now() };
     setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
@@ -2382,7 +2442,7 @@ async function startOcrForSlot(dateKey, slot, blob) {
     pollOcrResults();
   } catch (e) {
     console.warn("ocr upload failed", key, e);
-    if (currentDetailDate === dateKey) showOcrHint(slot, "写真を送れませんでした（送信ボタンのときに送り直します）", "isWaiting");
+    if (currentDetailDate === dateKey) showOcrHint(slot, `写真を送れませんでした: ${e.message}（送信ボタンのときに送り直します）`, "isWaiting");
   }
 }
 
@@ -2579,6 +2639,7 @@ function loadSettingsFields() {
   autoBackupIntervalRow.hidden = !autoBackupCheckbox.checked;
   showReminderCheckbox.checked = getShowReminderSetting();
   ocrAutoCheckbox.checked = getOcrAutoSetting();
+  renderHolidayPicker();
   renderPinnedDestList();
   const destHistoryMax = getDestHistoryMax();
   // プリセットにない値が既に保存されていた場合、無言で変更してしまわないよう選択肢を足しておく

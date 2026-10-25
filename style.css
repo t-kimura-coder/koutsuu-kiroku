@@ -1572,3 +1572,36 @@ html, body {
 .ocrHint.isDiff {
   color: var(--danger);
 }
+
+/* 定休日の曜日選択 */
+.weekdayPicker {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+.weekdayPick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.weekdayPick.isSun {
+  color: var(--sun);
+}
+.weekdayPick.isSat {
+  color: var(--sat);
+}
+.weekdayPick input {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
