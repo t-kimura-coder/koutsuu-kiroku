@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=31">
+<link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
 
@@ -285,6 +285,13 @@
         <span>送る期間（締めの直後は「前の期間」）</span>
         <select id="gasPeriodSelect" class="fieldSelectCompact"></select>
       </label>
+      <label class="checkboxField">
+        <input type="checkbox" id="ocrAutoCheckbox">
+        <span class="checkboxLabelText">
+          <span class="checkboxTitle">写真から数字を読み取る（試験中）</span>
+          <span class="checkboxDesc">メーターの写真を撮ると裏で送り、読み取れた数字を始針・終針の欄に入れます。数字が入ったら必ず写真と見比べてください（数分かかることがあります）</span>
+        </span>
+      </label>
       <div class="field">
         <button id="gasTestBtn" class="ghostBtn"><span class="inlineIcon" id="gasTestIcon"></span>接続テスト</button>
         <button id="gasSendBtn" class="ghostBtn"><span class="inlineIcon" id="gasSendIcon"></span>選んだ期間をスプレッドシートへ送る</button>
@@ -392,10 +399,12 @@
       <label class="field">
         <span><span class="fieldIcon" id="startIcon"></span>開始距離（始針）</span>
         <input type="number" id="startInput" inputmode="decimal" step="0.1" placeholder="例）10000.0">
+        <span id="ocrHintStart" class="ocrHint" hidden></span>
       </label>
       <label class="field">
         <span><span class="fieldIcon" id="endIcon"></span>終了距離（終針）</span>
         <input type="number" id="endInput" inputmode="decimal" step="0.1" placeholder="例）10015.0">
+        <span id="ocrHintEnd" class="ocrHint" hidden></span>
       </label>
     </div>
 
@@ -534,6 +543,6 @@
   </div>
 </div>
 
-<script src="app.js?v=51"></script>
+<script src="app.js?v=52"></script>
 </body>
 </html>

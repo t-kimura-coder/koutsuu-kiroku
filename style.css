@@ -1554,3 +1554,21 @@ html, body {
   color: var(--sub);
   font-size: 14px;
 }
+
+/* 写真の読み取り（始針・終針の欄の下の案内） */
+.ocrHint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--accent);
+}
+.ocrHint[hidden] {
+  display: none;
+}
+.ocrHint.isWaiting {
+  color: var(--sub);
+}
+.ocrHint.isDiff {
+  color: var(--danger);
+}

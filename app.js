@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 51;
+const APP_VERSION = 52;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-10-25", type: "feature", text: "設定に「写真から数字を読み取る（試験中）」を追加しました。有効にすると、メーター写真を撮ったあと数分で、読み取れた数字が始針・終針の欄に入ります（必ず写真と見比べてください）" },
   { date: "2026-10-25", type: "feature", text: "スプレッドシートへ送ったあと、その期間のメーター写真も裏で送るようにしました（写真から数字を読み取る仕組みの準備です。操作は変わりません）" },
   { date: "2026-10-23", type: "feature", text: "ホームの「今月分を送信」で、先月分がまだ送られていないときは「先月分・今月分のどちらを送るか」を聞くようにしました（20日を過ぎても先月分を送れます）" },
   { date: "2026-10-23", type: "feature", text: "スプレッドシートへ送るとき、送信中の画面と結果（送れた件数・専用シートを開くボタン）を表示するようにしました" },
@@ -1066,6 +1067,9 @@ const gasTokenInput = document.getElementById("gasTokenInput");
 const gasTestBtn = document.getElementById("gasTestBtn");
 const gasSendBtn = document.getElementById("gasSendBtn");
 const gasBoxBackupBtn = document.getElementById("gasBoxBackupBtn");
+const ocrAutoCheckbox = document.getElementById("ocrAutoCheckbox");
+const ocrHintStart = document.getElementById("ocrHintStart");
+const ocrHintEnd = document.getElementById("ocrHintEnd");
 const gasStatusText = document.getElementById("gasStatusText");
 const appUrlText = document.getElementById("appUrlText");
 const copyAppUrlBtn = document.getElementById("copyAppUrlBtn");
@@ -1395,6 +1399,7 @@ async function openDetail(dateKey) {
     start2Input.value = rec && rec.start2 != null ? rec.start2 : "";
     end2Input.value = rec && rec.end2 != null ? rec.end2 : "";
     updateSummary();
+    refreshOcrHints(dateKey);
 
     listView.hidden = true;
     detailView.hidden = false;
@@ -2297,6 +2302,176 @@ async function uploadPeriodPhotos(payload, name, email) {
   }
 }
 
+/* ---------- 写真から数字を読み取る（試験中） ----------
+   設定で有効にすると、メーター写真を撮った直後にその1枚を GAS へ預け、PC側の読み取り係が読んだ数字を
+   20秒おきに取りに行く。数字が届いたら、欄が空ならそのまま入れて「要確認」と案内し、
+   すでに別の数字が入っていれば上書きせずに「写真の数字」として並べて見せる */
+const OCR_AUTO_KEY = "koutsuu-kiroku-ocr-auto";
+const OCR_PENDING_KEY = "koutsuu-kiroku-ocr-pending"; // {"日付|区分": {fileId, at}}
+const OCR_RESULT_KEY = "koutsuu-kiroku-ocr-result"; // {"日付|区分": {read, at}} 読めなかったときは read: null
+const OCR_POLL_MS = 20000;
+const OCR_GIVE_UP_MS = 3 * 60 * 60 * 1000; // 3時間たっても読まれなければ諦める（PCが止まっている等）
+
+function getOcrAutoSetting() {
+  return getLocal(OCR_AUTO_KEY) === "1";
+}
+
+function setOcrAutoSetting(value) {
+  setLocal(OCR_AUTO_KEY, value ? "1" : "0");
+}
+
+function readJsonLocal(key) {
+  try {
+    return JSON.parse(getLocal(key) || "{}") || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function showOcrHint(slot, text, cls) {
+  const el = slot === "start" ? ocrHintStart : ocrHintEnd;
+  el.className = "ocrHint" + (cls ? ` ${cls}` : "");
+  el.textContent = text || "";
+  el.hidden = !text;
+}
+
+// 開いている日の、読み取りの状態を欄の下に出す（openDetail から呼ぶ）
+function refreshOcrHints(dateKey) {
+  const pending = readJsonLocal(OCR_PENDING_KEY);
+  const results = readJsonLocal(OCR_RESULT_KEY);
+  for (const slot of ["start", "end"]) {
+    const key = `${dateKey}|${slot}`;
+    const input = slot === "start" ? startInput : endInput;
+    if (pending[key]) {
+      showOcrHint(slot, "写真を読み取り中…（数分かかることがあります）", "isWaiting");
+    } else if (results[key] && results[key].read == null) {
+      showOcrHint(slot, "写真から数字を読み取れませんでした", "isWaiting");
+    } else if (results[key] && input.value !== "" && parseFloat(input.value) === results[key].read) {
+      showOcrHint(slot, "写真から読み取った数字です。写真と見比べてください");
+    } else if (results[key] && input.value !== "") {
+      showOcrHint(slot, `写真の数字は ${results[key].read} と読めました（欄と違います）`, "isDiff");
+    } else {
+      showOcrHint(slot, "");
+    }
+  }
+}
+
+// 写真を撮った直後に呼ぶ。設定が有効で、スプレッドシート送信が設定済みのときだけ動く
+async function startOcrForSlot(dateKey, slot, blob) {
+  if (!getOcrAutoSetting() || !isGasConfigured() || !blob) return;
+  const name = getUserName();
+  if (!name) return;
+  const key = `${dateKey}|${slot}`;
+  const input = slot === "start" ? startInput : endInput;
+  const typed = currentDetailDate === dateKey && input.value !== "" ? parseFloat(input.value) : null;
+  if (currentDetailDate === dateKey) showOcrHint(slot, "写真を送っています…", "isWaiting");
+  try {
+    const image = await shrinkPhotoForUpload(blob);
+    const res = await gasRequest("uploadPhoto", { name, email: getLocal(GAS_EMAIL_KEY), date: dateKey, slot, value: typed, image });
+    const pending = readJsonLocal(OCR_PENDING_KEY);
+    pending[key] = { fileId: res.fileId, at: Date.now() };
+    setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+    const results = readJsonLocal(OCR_RESULT_KEY);
+    delete results[key];
+    setLocal(OCR_RESULT_KEY, JSON.stringify(results));
+    // 送信ボタンのときに同じ写真を送り直さないよう、送った印も付ける
+    const uploaded = getUploadedPhotos();
+    uploaded[key] = blob.size;
+    setLocal(GAS_PHOTO_UPLOADED_KEY, JSON.stringify(uploaded));
+    if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+    pollOcrResults();
+  } catch (e) {
+    console.warn("ocr upload failed", key, e);
+    if (currentDetailDate === dateKey) showOcrHint(slot, "写真を送れませんでした（送信ボタンのときに送り直します）", "isWaiting");
+  }
+}
+
+// 読み取り結果を欄や記録に入れる
+async function applyOcrResult(dateKey, slot, read) {
+  const key = `${dateKey}|${slot}`;
+  const results = readJsonLocal(OCR_RESULT_KEY);
+  results[key] = { read, at: Date.now() };
+  setLocal(OCR_RESULT_KEY, JSON.stringify(results));
+  if (read == null) {
+    if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+    return;
+  }
+  if (currentDetailDate === dateKey && !detailView.hidden && !detailLoading) {
+    const input = slot === "start" ? startInput : endInput;
+    // 開始距離は「前回の終了距離」が自動で入っていることがあるので、その場合も写真の数字で置き換える
+    const autoFilled = slot === "start" && previousDayEnd != null && parseFloat(input.value) === previousDayEnd;
+    if (input.value === "" || autoFilled) {
+      input.value = String(read);
+      detailDirty = true;
+      updateSummary();
+      try {
+        await saveCurrentDetail();
+      } catch (e) {
+        console.error("ocr save failed", e);
+      }
+    }
+    refreshOcrHints(dateKey);
+    return;
+  }
+  // 別の画面にいるときは、記録の欄が空ならそこへ入れる
+  try {
+    const rec = await getRecord(dateKey, { images: false });
+    if (rec && rec[slot] == null) {
+      rec[slot] = read;
+      await putRecord(rec);
+      if (!listView.hidden) renderList();
+      if (!homeView.hidden) renderHome();
+    }
+  } catch (e) {
+    console.error("ocr record update failed", e);
+  }
+}
+
+let ocrPolling = false;
+
+async function pollOcrResults() {
+  if (ocrPolling || document.visibilityState !== "visible" || !isGasConfigured()) return;
+  const pending = readJsonLocal(OCR_PENDING_KEY);
+  const keys = Object.keys(pending);
+  if (!keys.length) return;
+  ocrPolling = true;
+  try {
+    for (const key of keys) {
+      const job = pending[key];
+      const [dateKey, slot] = key.split("|");
+      if (!job || !job.fileId || Date.now() - (job.at || 0) > OCR_GIVE_UP_MS) {
+        delete pending[key];
+        setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+        if (currentDetailDate === dateKey) refreshOcrHints(dateKey);
+        continue;
+      }
+      let res;
+      try {
+        res = await gasRequest("photoResult", { fileId: job.fileId });
+      } catch (e) {
+        break; // 電波が無いときは次の機会に
+      }
+      if (res.state === "読取済" || res.state === "読取不可") {
+        delete pending[key];
+        setLocal(OCR_PENDING_KEY, JSON.stringify(pending));
+        await applyOcrResult(dateKey, slot, res.state === "読取済" ? res.read : null);
+      }
+    }
+  } finally {
+    ocrPolling = false;
+  }
+}
+
+setInterval(pollOcrResults, OCR_POLL_MS);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") pollOcrResults();
+});
+
+ocrAutoCheckbox.addEventListener("change", () => {
+  setOcrAutoSetting(ocrAutoCheckbox.checked);
+  showSavedToast();
+});
+
 gasSendBtn.addEventListener("click", async () => {
   setLocal(GAS_URL_KEY, gasUrlInput.value.trim());
   setLocal(GAS_TOKEN_KEY, gasTokenInput.value.trim());
@@ -2403,6 +2578,7 @@ function loadSettingsFields() {
   autoBackupIntervalSelect.value = String(getAutoBackupIntervalHours());
   autoBackupIntervalRow.hidden = !autoBackupCheckbox.checked;
   showReminderCheckbox.checked = getShowReminderSetting();
+  ocrAutoCheckbox.checked = getOcrAutoSetting();
   renderPinnedDestList();
   const destHistoryMax = getDestHistoryMax();
   // プリセットにない値が既に保存されていた場合、無言で変更してしまわないよう選択肢を足しておく
@@ -3030,6 +3206,7 @@ async function handlePhotoFileSelected(input) {
       console.error("save failed", err);
       alert("保存に失敗しました。もう一度お試しください。");
     }
+    startOcrForSlot(targetDate, slot, blob); // 写真から数字を読み取る（設定が有効なときだけ。待たない）
   } finally {
     hidePhotoProcessing();
   }
