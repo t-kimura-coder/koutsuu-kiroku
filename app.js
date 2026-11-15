@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 63;
+const APP_VERSION = 64;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-11-15", type: "fix", text: "自動バックアップでは、あなた専用のスプレッドシートを書き換えないようにしました（先月分を送って印刷する前に、内容が今月の途中に変わらないように）。専用シートは「送信」ボタンで送ったときだけ変わります" },
   { date: "2026-10-25", type: "feature", text: "使い方ガイドに「月次送信の手順」（はじめの準備・毎月やること・困ったとき）を追加しました。その他 → スプレッドシート送信の「月次送信の手順を見る」からも開けます" },
   { date: "2026-10-25", type: "feature", text: "お知らせ一覧を「新機能」「修正」「すべて」のタブで切り替えられるようにしました（前回選んだタブを覚えます）" },
   { date: "2026-10-25", type: "fix", text: "バグ点検の指摘を修正しました（写真を消した直後に前の写真の数字が入ることがある・読み取りを切った状態で撮り直すと前の写真の数字が入る・前回の終了写真が二重に送られることがある）" },
@@ -2265,7 +2266,8 @@ async function submitPeriodToGas(start, { silent = false } = {}) {
       showSendProgress(`${periodLabel}（入力済み ${filled}日）\n初めての送信は、専用シートを作るため少し時間がかかります`);
     }
     const email = getLocal(GAS_EMAIL_KEY);
-    const res = await gasRequest("submitPeriod", { ...payload, email });
+    // auto: 自動バックアップ。GAS は走行記録シートにだけ入れ、専用シートは書き換えない
+    const res = await gasRequest("submitPeriod", { ...payload, email, auto: silent });
     // 自動バックアップ（silent）は「提出した」扱いにしない（先月分の確認や送る期間の初期値がずれるため）
     if (!silent) {
       let log = {};
