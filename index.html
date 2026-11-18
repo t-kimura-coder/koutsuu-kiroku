@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=37">
+<link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
 
@@ -73,6 +73,9 @@
         <span class="homeSecondaryIcon" id="homeSendIcon"></span>今月分を送信
       </button>
     </div>
+    <button id="goToCalendarBtn" class="homeSecondaryBtn homeWideBtn">
+      <span class="homeSecondaryIcon" id="homeCalendarIcon"></span>カレンダーでまとめて入力
+    </button>
 
     <div id="homeReminder" class="homeReminder">
       <span class="fieldIcon" id="homeReminderIcon"></span><span id="homeReminderText"></span>
@@ -451,7 +454,47 @@
       </div>
     </div>
     <div id="warningBox" class="warningBox" hidden></div>
+    <div id="detailCalBar" class="detailCalBar" hidden>
+      <button id="detailNoDriveBtn" class="ghostBtn" type="button">この日は乗らなかった</button>
+      <button id="detailNextDayBtn" class="detailNextBtn" type="button">次の未入力の日へ</button>
+    </div>
   </div>
+  </div>
+</div>
+
+<div id="calendarView" class="view" hidden>
+  <header class="topbar">
+    <button id="homeFromCalendarBtn" class="navBtn" aria-label="ホーム"></button>
+    <div class="periodLabel screenTitle">まとめて入力</div>
+    <div style="width:2.5em"></div>
+  </header>
+  <div class="listScrollArea">
+    <div class="periodNavBar">
+      <button id="calPrevPeriod" class="navBtn" aria-label="前の期間">◀</button>
+      <div class="periodLabel">
+        <div id="calPeriodTitle">-</div>
+        <div id="calSummary" class="calSummary"></div>
+      </div>
+      <button id="calNextPeriod" class="navBtn" aria-label="次の期間">▶</button>
+    </div>
+    <div class="calBody">
+      <button id="calPickPhotosBtn" class="ghostBtn" type="button"><span class="inlineIcon" id="calPickIcon"></span>写真をまとめて選ぶ</button>
+      <input type="file" id="calPhotoInput" accept="image/*" multiple hidden>
+      <div id="calNotice" class="calNotice" hidden></div>
+      <div class="calWeekHead"><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span><span class="sun">日</span></div>
+      <div id="calGrid" class="calGrid"></div>
+      <div class="calLegend">
+        <span><i class="calSw ok"></i>できた</span>
+        <span><i class="calSw half"></i>途中</span>
+        <span><i class="calSw none"></i>未入力</span>
+        <span><i class="calSw off"></i>乗らない・休み</span>
+      </div>
+      <p class="calHint">日をタップすると、その日の記録を開きます。写真は撮った日時で日付に振り分け、その日の早い写真を開始、遅い写真を終了に入れます。</p>
+      <div id="calUnassignedBox" class="calUnassignedBox" hidden>
+        <div class="calUnassignedTitle">日付が分からなかった写真</div>
+        <div id="calUnassignedList"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -583,6 +626,6 @@
   </div>
 </div>
 
-<script src="app.js?v=64"></script>
+<script src="app.js?v=65"></script>
 </body>
 </html>

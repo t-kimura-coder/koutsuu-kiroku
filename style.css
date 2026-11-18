@@ -15,6 +15,8 @@
   --muted-fg: #b9b6ab;
   --warning-bg: #fdeaea;
   --info-bg: #e8f0fd;
+  --half-bg: #fbf0d6;
+  --half-fg: #8a5a00;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,6 +37,8 @@
     --muted-fg: #6f7b73;
     --warning-bg: #3a2020;
     --info-bg: #1c2836;
+    --half-bg: #3a3120;
+    --half-fg: #e8c070;
   }
 }
 
@@ -55,6 +59,8 @@
   --muted-fg: #6f7b73;
   --warning-bg: #3a2020;
   --info-bg: #1c2836;
+  --half-bg: #3a3120;
+  --half-fg: #e8c070;
 }
 
 * { box-sizing: border-box; }
@@ -1711,4 +1717,194 @@ html, body {
 .ocrHint.isDiff .ocrCheckBtn {
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* まとめて入力（カレンダー） */
+.homeWideBtn {
+  width: 100%;
+  margin-top: 10px;
+}
+.calBody {
+  padding: 4px 16px 24px;
+}
+.calBody > .ghostBtn {
+  width: 100%;
+  margin-bottom: 10px;
+}
+.calSummary {
+  font-size: 12px;
+  color: var(--sub);
+}
+.calSummary.todo {
+  color: var(--danger);
+}
+.calNotice {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--info-bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.calWeekHead,
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.calWeekHead {
+  font-size: 11px;
+  color: var(--sub);
+  text-align: center;
+  margin-bottom: 4px;
+}
+.calWeekHead .sat {
+  color: var(--sat);
+}
+.calWeekHead .sun {
+  color: var(--sun);
+}
+.calDay {
+  min-height: 52px;
+  padding: 4px 2px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  font-family: inherit;
+}
+.calDay.blank {
+  visibility: hidden;
+}
+.calNum {
+  font-size: 13px;
+  font-weight: 600;
+}
+.calSub {
+  font-size: 10.5px;
+  line-height: 1.2;
+}
+.calDay.ok {
+  background: var(--header-bg);
+  color: var(--accent);
+}
+.calDay.half {
+  background: var(--half-bg);
+  color: var(--half-fg);
+}
+.calDay.none {
+  border: 1px dashed var(--danger);
+  color: var(--danger);
+}
+.calDay.off {
+  background: var(--muted-bg);
+  color: var(--sub);
+}
+.calDay.fut {
+  color: var(--muted-fg);
+}
+.calLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--sub);
+}
+.calLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.calSw {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.calSw.ok {
+  background: var(--header-bg);
+  border: 1px solid var(--accent);
+}
+.calSw.half {
+  background: var(--half-bg);
+}
+.calSw.none {
+  border: 1px dashed var(--danger);
+}
+.calSw.off {
+  background: var(--muted-bg);
+}
+.calHint {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--sub);
+  margin: 10px 0 0;
+}
+.calUnassignedBox {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.calUnassignedBox[hidden] {
+  display: none;
+}
+.calUnassignedTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.calUnassignedRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.calUnassignedRow img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.calUnassignedCtl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.calUnassignedCtl input,
+.calUnassignedCtl select {
+  flex: 1;
+  min-width: 0;
+}
+.calUnassignedCtl .ghostBtn {
+  width: 100%;
+}
+.detailCalBar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+.detailCalBar[hidden] {
+  display: none;
+}
+.detailNextBtn {
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 8px;
 }

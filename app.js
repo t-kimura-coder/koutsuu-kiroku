@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 64;
+const APP_VERSION = 65;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-11-18", type: "feature", text: "ホームに「カレンダーでまとめて入力」を追加しました。期間を1画面で見て空いている日を埋められます。カメラで撮っておいたメーターの写真をまとめて選ぶと、撮った日時で日付に振り分けます（早い写真＝開始、遅い写真＝終了）。乗らなかった日は1タップで埋められます" },
   { date: "2026-11-15", type: "fix", text: "自動バックアップでは、あなた専用のスプレッドシートを書き換えないようにしました（先月分を送って印刷する前に、内容が今月の途中に変わらないように）。専用シートは「送信」ボタンで送ったときだけ変わります" },
   { date: "2026-10-25", type: "feature", text: "使い方ガイドに「月次送信の手順」（はじめの準備・毎月やること・困ったとき）を追加しました。その他 → スプレッドシート送信の「月次送信の手順を見る」からも開けます" },
   { date: "2026-10-25", type: "feature", text: "お知らせ一覧を「新機能」「修正」「すべて」のタブで切り替えられるようにしました（前回選んだタブを覚えます）" },
@@ -347,6 +348,9 @@ function injectIcons() {
   injectIcon("homeMenuPlayIcon", PLAY_ICON_SVG);
   injectIcon("homeListIcon", LIST_ICON_SVG);
   injectIcon("homeSendIcon", SEND_ICON_SVG);
+  injectIcon("homeCalendarIcon", CALENDAR_ICON_SVG);
+  injectIcon("calPickIcon", GALLERY_ICON_SVG);
+  injectIcon("homeFromCalendarBtn", HOME_ICON_SVG);
   injectIcon("tabIconHome1", HOME_ICON_SVG);
   injectIcon("tabIconVehicle1", carIconHtml(19));
   injectIcon("tabIconOptions1", OPTIONS_ICON_SVG);
@@ -1188,6 +1192,15 @@ const versionLabel = document.getElementById("versionLabel");
 const warningBox = document.getElementById("warningBox");
 
 const detailHomeBtn = document.getElementById("detailHomeBtn");
+const calendarView = document.getElementById("calendarView");
+const calGrid = document.getElementById("calGrid");
+const calPeriodTitle = document.getElementById("calPeriodTitle");
+const calSummary = document.getElementById("calSummary");
+const calNotice = document.getElementById("calNotice");
+const calPhotoInput = document.getElementById("calPhotoInput");
+const calUnassignedBox = document.getElementById("calUnassignedBox");
+const calUnassignedList = document.getElementById("calUnassignedList");
+const detailCalBar = document.getElementById("detailCalBar");
 const detailSettingsBtn = document.getElementById("detailSettingsBtn");
 const detailListBtn = document.getElementById("detailListBtn");
 const detailDateEl = document.getElementById("detailDate");
@@ -1450,7 +1463,11 @@ async function findLastRecordWithEnd(fromDateObj) {
   return usable[0];
 }
 
-async function openDetail(dateKey) {
+// from: "list"（記録一覧・ホーム）| "calendar"（まとめて入力）。戻る先と、カレンダー用の帯の表示を決める
+let detailReturnTarget = "list";
+
+async function openDetail(dateKey, { from = "list" } = {}) {
+  detailReturnTarget = from;
   currentDetailDate = dateKey;
   detailLoading = true; // 読み込み完了までは、他の日付の保存処理がこのdateKeyに紛れ込まないようにする
   detailDirty = false;
@@ -1498,6 +1515,9 @@ async function openDetail(dateKey) {
     refreshOcrHints(dateKey);
 
     listView.hidden = true;
+    calendarView.hidden = true;
+    detailCalBar.hidden = from !== "calendar";
+    detailListBtn.querySelector(".navBtnLabel").textContent = from === "calendar" ? "カレンダー" : "記録一覧";
     detailView.hidden = false;
   } catch (err) {
     console.error("openDetail failed", err);
@@ -1986,8 +2006,13 @@ async function closeDetailToList() {
   if (!saved) return; // 保存できていない可能性があるため、一覧には戻らない
   currentDetailDate = null;
   detailView.hidden = true;
-  listView.hidden = false;
-  await renderList();
+  if (detailReturnTarget === "calendar") {
+    calendarView.hidden = false;
+    await renderCalendar();
+  } else {
+    listView.hidden = false;
+    await renderList();
+  }
   await maybeAutoBackup();
 }
 
@@ -2905,6 +2930,7 @@ async function showSection(target) {
   if (target === "home") {
     settingsView.hidden = true;
     listView.hidden = true;
+    calendarView.hidden = true;
     homeView.hidden = false;
     requestAnimationFrame(() => setActiveBottomTab(target));
     await renderHome();
@@ -2918,6 +2944,7 @@ async function showSection(target) {
   settingsSectionTitle.textContent = SETTINGS_SECTION_TITLES[target] || "";
   homeView.hidden = true;
   listView.hidden = true;
+  calendarView.hidden = true;
   settingsView.hidden = false;
   requestAnimationFrame(() => setActiveBottomTab(target));
 }
@@ -3690,3 +3717,353 @@ window.addEventListener("pagehide", saveQuietly);
   if (gasSetupFromLink) showSavedToast("スプレッドシート送信の設定を入れました");
   await checkPendingShot();
 })();
+
+
+/* ---------- まとめて入力（カレンダー）----------
+   締め期間を1画面のカレンダーで見て、空いている日を埋める。写真はカメラロールからまとめて選び、
+   撮影日時で日付に振り分ける（その日の早い写真＝開始、遅い写真＝終了）。日をタップすると記録画面を開く */
+let calPeriodStart = periodStartFor(new Date());
+let calUnassigned = []; // 日時が分からなかった写真 [{ blob, url }]
+
+// 1日の状態：ok（できた）| half（途中）| none（未入力）| off（乗らない・休み）| fut（これから）
+function calDayStatus(rec, dateObj, todayKey) {
+  const key = fmtKey(dateObj);
+  if (key > todayKey) return "fut";
+  if (rec && rec.noDrive) return "off";
+  const hasAny = rec && (rec.start != null || rec.end != null || rec.destination || rec.hasPhotoStart || rec.hasPhotoEnd);
+  if (rec && rec.start != null && rec.end != null && rec.destination) return "ok";
+  if (hasAny) return "half";
+  if (isHoliday(dateObj)) return "off";
+  return "none";
+}
+
+async function renderCalendar() {
+  const start = calPeriodStart;
+  const end = periodEndFor(start);
+  calPeriodTitle.textContent = `${start.getMonth() + 1}/${start.getDate()}〜${end.getMonth() + 1}/${end.getDate()}`;
+  const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
+  const map = new Map(records.map((r) => [r.date, r]));
+  const todayKey = fmtKey(new Date());
+  calGrid.innerHTML = "";
+  // 月曜始まり。期間の初日の曜日まで空けておく
+  const lead = (start.getDay() + 6) % 7;
+  for (let i = 0; i < lead; i++) {
+    const blank = document.createElement("div");
+    blank.className = "calDay blank";
+    calGrid.appendChild(blank);
+  }
+  let noneCount = 0;
+  let halfCount = 0;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateObj = new Date(d);
+    const key = fmtKey(dateObj);
+    const rec = map.get(key);
+    const st = calDayStatus(rec, dateObj, todayKey);
+    if (st === "none") noneCount++;
+    if (st === "half") halfCount++;
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = `calDay ${st}`;
+    const label = dateObj.getDate() === 1 || key === fmtKey(start) ? `${dateObj.getMonth() + 1}/${dateObj.getDate()}` : String(dateObj.getDate());
+    let sub = "";
+    if (st === "ok") {
+      const t = totalDistance(rec);
+      sub = t != null ? `${Math.round(t)}km` : "";
+    } else if (st === "half") {
+      const photos = (rec.hasPhotoStart ? 1 : 0) + (rec.hasPhotoEnd ? 1 : 0);
+      sub = rec.start != null && rec.end != null ? "行先?" : photos ? `写真${photos}` : "途中";
+    } else if (st === "none") {
+      sub = "未入力";
+    } else if (st === "off") {
+      sub = "—";
+    }
+    cell.innerHTML = `<span class="calNum">${label}</span><span class="calSub">${escapeHtml(sub)}</span>`;
+    if (st === "fut") cell.disabled = true;
+    else cell.addEventListener("click", () => openDetailFromCalendar(key));
+    calGrid.appendChild(cell);
+  }
+  const parts = [];
+  if (noneCount) parts.push(`未入力 ${noneCount}日`);
+  if (halfCount) parts.push(`途中 ${halfCount}日`);
+  calSummary.textContent = parts.length ? parts.join("・") : "空いている日はありません";
+  calSummary.classList.toggle("todo", noneCount + halfCount > 0);
+  renderCalUnassigned();
+}
+
+async function openCalendar() {
+  calPeriodStart = periodStartFor(new Date());
+  homeView.hidden = true;
+  listView.hidden = true;
+  calendarView.hidden = false;
+  calNotice.hidden = true;
+  await renderCalendar();
+}
+
+async function openDetailFromCalendar(key) {
+  await openDetail(key, { from: "calendar" });
+}
+
+// カレンダーから開いた日から、次に埋める日（未入力・途中）を探す。今日より先は見ない
+async function findNextOpenDay(afterKey) {
+  const start = calPeriodStart;
+  const end = periodEndFor(start);
+  const todayKey = fmtKey(new Date());
+  const records = await getRecordsInRange(fmtKey(start), fmtKey(end));
+  const map = new Map(records.map((r) => [r.date, r]));
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const key = fmtKey(d);
+    if (key <= afterKey) continue;
+    const st = calDayStatus(map.get(key), new Date(d), todayKey);
+    if (st === "none" || st === "half") return key;
+  }
+  return null;
+}
+
+async function goToNextOpenDay() {
+  const fromKey = currentDetailDate;
+  if (!(await saveDetailWithErrorAlert({ skipBreakSelfHeal: false }))) return;
+  const next = await findNextOpenDay(fromKey);
+  if (next) {
+    await openDetail(next, { from: "calendar" });
+    return;
+  }
+  showSavedToast("この期間の空いている日は、ここまでです");
+  await closeDetailToList();
+}
+
+// 「乗らなかった」：その日は記録なしで埋まった扱いにする（距離・行き先を入れると自動で外れる）
+async function markNoDrive() {
+  const key = currentDetailDate;
+  if (!key) return;
+  const hasInput = startInput.value !== "" || endInput.value !== "" || destinationInput.value.trim() !== "";
+  if (hasInput && !confirm("入っている距離・行き先を消して、「乗らなかった」にします。よろしいですか？")) return;
+  try {
+    const rec = (await getRecord(key, { images: false })) || { date: key };
+    await putRecord({ ...rec, date: key, destination: "", start: null, end: null, hasBreak: false, start2: null, end2: null, noDrive: true, updatedAt: Date.now() });
+  } catch (err) {
+    console.error("noDrive save failed", err);
+    alert("保存に失敗しました。もう一度お試しください。");
+    return;
+  }
+  detailDirty = false; // 今の画面の内容で上書きしない
+  const next = await findNextOpenDay(key);
+  if (next) {
+    await openDetail(next, { from: "calendar" });
+  } else {
+    showSavedToast("この期間の空いている日は、ここまでです");
+    await closeDetailToList();
+  }
+}
+
+/* --- 写真の撮影日時（JPEG の Exif）を読む。読めなければ null --- */
+async function readPhotoTakenAt(file) {
+  try {
+    const buf = await file.slice(0, 256 * 1024).arrayBuffer();
+    const v = new DataView(buf);
+    if (v.getUint16(0) !== 0xffd8) return null;
+    let off = 2;
+    while (off + 4 < v.byteLength) {
+      const marker = v.getUint16(off);
+      const len = v.getUint16(off + 2);
+      if (marker === 0xffe1 && v.getUint32(off + 4) === 0x45786966) return parseExifDate(v, off + 10);
+      if ((marker & 0xff00) !== 0xff00 || len < 2) return null;
+      off += 2 + len;
+    }
+  } catch (e) {
+    /* 読めない写真は日時なし扱い */
+  }
+  return null;
+}
+
+function parseExifDate(v, tiff) {
+  const little = v.getUint16(tiff) === 0x4949;
+  const u16 = (o) => v.getUint16(o, little);
+  const u32 = (o) => v.getUint32(o, little);
+  const readAscii = (o, n) => {
+    let t = "";
+    for (let i = 0; i < n && o + i < v.byteLength; i++) {
+      const c = v.getUint8(o + i);
+      if (!c) break;
+      t += String.fromCharCode(c);
+    }
+    return t;
+  };
+  const findTag = (ifd, tag) => {
+    if (ifd + 2 > v.byteLength) return null;
+    const n = u16(ifd);
+    for (let i = 0; i < n; i++) {
+      const e = ifd + 2 + i * 12;
+      if (e + 12 > v.byteLength) return null;
+      if (u16(e) === tag) return e;
+    }
+    return null;
+  };
+  const toDate = (entry) => {
+    if (entry == null) return null;
+    const m = readAscii(tiff + u32(entry + 8), 19).match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+    if (!m) return null;
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const ifd0 = tiff + u32(tiff + 4);
+  const exifPtr = findTag(ifd0, 0x8769);
+  if (exifPtr != null) {
+    const taken = toDate(findTag(tiff + u32(exifPtr + 8), 0x9003)); // DateTimeOriginal（撮影日時）
+    if (taken) return taken;
+  }
+  return toDate(findTag(ifd0, 0x0132)); // DateTime（最後に書き換えた日時）
+}
+
+// 日時：Exif の撮影日時。無ければ、ファイルの日時が今より2分以上前ならそれを使う（Android の多く）。
+// iPhone はファイルの日時が「選んだ時刻」になることがあるので、それは使わない
+async function photoTimeOf(file) {
+  const exif = await readPhotoTakenAt(file);
+  if (exif) return exif;
+  if (file.lastModified && Date.now() - file.lastModified > 2 * 60 * 1000) return new Date(file.lastModified);
+  return null;
+}
+
+// 1枚を、その日の開始か終了に入れる。すでに写真がある欄には入れない（false を返す）
+async function placeCalendarPhoto(dateKey, slot, blob) {
+  const rec = (await getRecord(dateKey, { images: false })) || { date: dateKey };
+  if (slot === "start" ? rec.hasPhotoStart : rec.hasPhotoEnd) return false;
+  const next = { ...rec, date: dateKey, updatedAt: Date.now() };
+  delete next.noDrive; // 写真を撮った日は「乗らなかった」ではない
+  if (slot === "start") next.photoStart = blob;
+  else next.photoEnd = blob;
+  await putRecord(next, { start: slot === "start", end: slot === "end" });
+  startOcrForSlot(dateKey, slot, blob); // 写真から数字を読み取る（設定が有効なときだけ）
+  return true;
+}
+
+async function importCalendarPhotos(files) {
+  const todayKey = fmtKey(new Date());
+  const byDate = new Map(); // 日付 → [{ file, time }]
+  const noTime = [];
+  let future = 0;
+  for (const file of files) {
+    const time = await photoTimeOf(file);
+    if (!time) {
+      noTime.push(file);
+      continue;
+    }
+    const key = fmtKey(time);
+    if (key > todayKey) {
+      future++;
+      continue;
+    }
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key).push({ file, time });
+  }
+  let placed = 0;
+  let skipped = 0;
+  let unreadable = 0;
+  const days = new Set();
+  for (const [key, list] of byDate) {
+    list.sort((a, b) => a.time - b.time);
+    // 1枚だけなら、午前は開始・午後は終了。2枚以上なら、最初を開始・最後を終了（間の写真は使わない）
+    const jobs =
+      list.length === 1
+        ? [[list[0].time.getHours() < 12 ? "start" : "end", list[0].file]]
+        : [["start", list[0].file], ["end", list[list.length - 1].file]];
+    skipped += Math.max(list.length - 2, 0);
+    for (const [slot, file] of jobs) {
+      let blob;
+      try {
+        blob = await downscaleImage(file);
+      } catch (e) {
+        unreadable++;
+        continue;
+      }
+      if (await placeCalendarPhoto(key, slot, blob)) {
+        placed++;
+        days.add(key);
+      } else {
+        skipped++;
+      }
+    }
+  }
+  for (const file of noTime) {
+    try {
+      const blob = await downscaleImage(file);
+      calUnassigned.push({ blob, url: URL.createObjectURL(blob) });
+    } catch (e) {
+      unreadable++;
+    }
+  }
+  const msg = [`${placed}枚を${days.size}日に振り分けました`];
+  if (skipped) msg.push(`${skipped}枚は、すでに写真があるか同じ日の間の写真なので入れていません`);
+  if (noTime.length) msg.push(`${noTime.length}枚は撮った日時が分からないので、下で日付を選んでください`);
+  if (future) msg.push(`${future}枚は今日より先の日付なので入れていません`);
+  if (unreadable) msg.push(`${unreadable}枚は読み込めませんでした`);
+  if (placed && getOcrAutoSetting() && isGasConfigured()) msg.push("数字は写真から読み取り中です");
+  calNotice.textContent = msg.join("。");
+  calNotice.hidden = false;
+}
+
+function renderCalUnassigned() {
+  calUnassignedBox.hidden = calUnassigned.length === 0;
+  calUnassignedList.innerHTML = "";
+  const todayKey = fmtKey(new Date());
+  calUnassigned.forEach((item, idx) => {
+    const row = document.createElement("div");
+    row.className = "calUnassignedRow";
+    row.innerHTML =
+      `<img alt="" src="${item.url}">` +
+      `<div class="calUnassignedCtl">` +
+      `<input type="date" max="${todayKey}" value="${todayKey}">` +
+      `<select><option value="end">終了</option><option value="start">開始</option></select>` +
+      `<button type="button" class="ghostBtn">この日に入れる</button>` +
+      `</div>`;
+    const [dateIn] = row.getElementsByTagName("input");
+    const [slotSel] = row.getElementsByTagName("select");
+    const [btn] = row.getElementsByTagName("button");
+    btn.addEventListener("click", async () => {
+      const key = dateIn.value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || key > todayKey) {
+        alert("今日までの日付を選んでください");
+        return;
+      }
+      if (!(await placeCalendarPhoto(key, slotSel.value, item.blob))) {
+        alert("その日の、その欄には写真がもう入っています。記録画面から差し替えてください");
+        return;
+      }
+      URL.revokeObjectURL(item.url);
+      calUnassigned.splice(idx, 1);
+      if (!calUnassigned.length) calNotice.hidden = true; // 「下で日付を選んで」の案内を残さない
+      await renderCalendar();
+    });
+    calUnassignedList.appendChild(row);
+  });
+}
+
+document.getElementById("goToCalendarBtn").addEventListener("click", openCalendar);
+document.getElementById("homeFromCalendarBtn").addEventListener("click", () => showSection("home"));
+document.getElementById("calPrevPeriod").addEventListener("click", async () => {
+  calPeriodStart = shiftPeriod(calPeriodStart, -1);
+  calNotice.hidden = true;
+  await renderCalendar();
+});
+document.getElementById("calNextPeriod").addEventListener("click", async () => {
+  calPeriodStart = shiftPeriod(calPeriodStart, 1);
+  calNotice.hidden = true;
+  await renderCalendar();
+});
+document.getElementById("calPickPhotosBtn").addEventListener("click", () => calPhotoInput.click());
+calPhotoInput.addEventListener("change", async () => {
+  const files = Array.from(calPhotoInput.files || []);
+  calPhotoInput.value = "";
+  if (!files.length) return;
+  showPhotoProcessing();
+  try {
+    await importCalendarPhotos(files);
+  } catch (err) {
+    console.error("bulk import failed", err);
+    alert("写真の取り込みに失敗しました。もう一度お試しください。");
+  } finally {
+    hidePhotoProcessing();
+  }
+  await renderCalendar();
+});
+document.getElementById("detailNoDriveBtn").addEventListener("click", markNoDrive);
+document.getElementById("detailNextDayBtn").addEventListener("click", goToNextOpenDay);
