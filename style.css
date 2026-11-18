@@ -1067,14 +1067,25 @@ html, body {
   gap: 20px;
 }
 
+/* その他・オプションの見出しごとのまとまり（2026-11-18：見出しが本文と同じ大きさで見分けにくかったので、枠で囲って大きくした） */
+.settingsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+}
 .settingsSectionHeading {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--sub);
-  padding-bottom: 6px;
+  color: var(--accent);
+  padding-bottom: 10px;
+  margin-bottom: -4px;
   border-bottom: 1px solid var(--border);
 }
 

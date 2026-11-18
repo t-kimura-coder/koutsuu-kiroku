@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
 
@@ -164,6 +164,7 @@
     </div>
 
     <div class="settingsPanel" data-panel="options" hidden>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="optionsGeneralHeadingIcon"></span>
         <span>基本設定</span>
@@ -205,6 +206,8 @@
         </select>
       </div>
 
+      </section>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="optionsDestHeadingIcon"></span>
         <span>行き先の設定</span>
@@ -228,9 +231,11 @@
           <option value="20">20件</option>
         </select>
       </label>
+      </section>
     </div>
 
     <div class="settingsPanel" data-panel="other" hidden>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherGeneralHeadingIcon"></span>
         <span>基本設定</span>
@@ -253,6 +258,8 @@
         </select>
       </label>
 
+      </section>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherDataHeadingIcon"></span>
         <span>データ管理</span>
@@ -268,6 +275,8 @@
         <button id="checkPhotosBtn" class="ghostBtn"><span class="inlineIcon" id="checkPhotosIcon"></span>写真の点検</button>
       </div>
 
+      </section>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherSheetHeadingIcon"></span>
         <span>スプレッドシート送信（試験中）</span>
@@ -309,6 +318,8 @@
         <a id="gasPersonalLink" class="gasPersonalLink" href="#" target="_blank" rel="noopener" hidden>あなた専用のスプレッドシートを開く（内容の確認・PDF印刷）</a>
       </div>
 
+      </section>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherShareHeadingIcon"></span>
         <span>アプリを共有</span>
@@ -322,6 +333,8 @@
         <button id="shareAppUrlBtn" class="ghostBtn"><span class="inlineIcon" id="shareAppIcon"></span>共有する</button>
       </div>
 
+      </section>
+      <section class="settingsGroup">
       <div class="settingsSectionHeading">
         <span class="fieldIcon" id="otherHelpHeadingIcon"></span>
         <span>ヘルプ</span>
@@ -332,6 +345,7 @@
       </div>
 
       <div class="versionLabel" id="versionLabel"></div>
+      </section>
     </div>
   </div>
 
@@ -626,6 +640,6 @@
   </div>
 </div>
 
-<script src="app.js?v=65"></script>
+<script src="app.js?v=66"></script>
 </body>
 </html>
