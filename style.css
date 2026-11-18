@@ -1067,7 +1067,8 @@ html, body {
   gap: 20px;
 }
 
-/* その他・オプションの見出しごとのまとまり（2026-11-18：見出しが本文と同じ大きさで見分けにくかったので、枠で囲って大きくした） */
+/* その他・オプションの見出しごとのまとまり（2026-11-18：見出しが本文と同じ大きさで見分けにくかったので、枠で囲って大きくした）。
+   見出しは枠の上辺にくっついた帯にする（浮いた角丸の形にしないので、ボタンと見分けがつく） */
 .settingsGroup {
   display: flex;
   flex-direction: column;
@@ -1075,7 +1076,12 @@ html, body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 14px 14px 16px;
+  padding: 0 0 16px;
+  overflow: hidden;
+}
+.settingsGroup > :not(.settingsSectionHeading) {
+  margin-left: 14px;
+  margin-right: 14px;
 }
 .settingsSectionHeading {
   display: flex;
@@ -1084,9 +1090,9 @@ html, body {
   font-size: 16px;
   font-weight: 700;
   color: var(--accent);
-  padding-bottom: 10px;
-  margin-bottom: -4px;
-  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  padding: 11px 14px;
+  border-bottom: 2px solid var(--accent);
 }
 
 .settingsSectionHeading .fieldIcon svg {
