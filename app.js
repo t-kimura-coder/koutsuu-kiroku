@@ -2,7 +2,7 @@
 
 // index.htmlのapp.js/style.css読み込み時の?v=番号と合わせて手動更新する
 // (実際にこのapp.jsが読み込まれて実行された、という一番確実な証拠になる)
-const APP_VERSION = 67;
+const APP_VERSION = 68;
 
 // 新しい版が届いても、撮影中・写真選び中・入力中など使っている途中には読み込み直さない
 // （読み込み直しで撮影した写真や入力中の内容が失われるのを防ぐ）。
@@ -205,6 +205,7 @@ const LINK_ICON_SVG = strokeIcon(
 /* ---------- お知らせ ---------- */
 // 新しい項目を配列の先頭に追加していく(新しい順)
 const ANNOUNCEMENTS = [
+  { date: "2026-11-18", type: "fix", text: "バグ点検の指摘を修正しました（乗らなかった日に写真の読み取り結果が入ることがある・日付が分からなかった写真を続けて入れると二重になったり抜けたりする・乗らなかったの確認が空の日にも出る・読み取り結果がカレンダーにすぐ出ない ほか）" },
   { date: "2026-11-18", type: "fix", text: "オプション・その他の画面で、「基本設定」「データ管理」などの見出しを大きくし、まとまりごとに枠で囲んで見分けやすくしました" },
   { date: "2026-11-18", type: "feature", text: "ホームに「カレンダーでまとめて入力」を追加しました。期間を1画面で見て空いている日を埋められます。カメラで撮っておいたメーターの写真をまとめて選ぶと、撮った日時で日付に振り分けます（早い写真＝開始、遅い写真＝終了）。乗らなかった日は1タップで埋められます" },
   { date: "2026-11-15", type: "fix", text: "自動バックアップでは、あなた専用のスプレッドシートを書き換えないようにしました（先月分を送って印刷する前に、内容が今月の途中に変わらないように）。専用シートは「送信」ボタンで送ったときだけ変わります" },
@@ -2319,7 +2320,7 @@ ${res.personal.pending}`);
       setGasStatus(`${gasStatusText.textContent}
 専用シートの更新に失敗しました: ${res.personal.error}`);
     }
-    if (Array.isArray(res.incompleteDays) && res.incompleteDays.length) {
+    if (!silent && Array.isArray(res.incompleteDays) && res.incompleteDays.length) {
       const days = res.incompleteDays.map((d) => String(d).slice(5).replace("-", "/")).join("、");
       setGasStatus(`${gasStatusText.textContent}
 ※ 始針か終針が空の日は、専用シートに入りません: ${days}`);
@@ -2720,11 +2721,12 @@ async function applyOcrResult(dateKey, slot, read) {
   // 別の画面にいるときは、記録の欄が空ならそこへ入れる
   try {
     const rec = await getRecord(dateKey, { images: false });
-    if (rec && rec[slot] == null) {
+    if (rec && !rec.noDrive && rec[slot] == null) {
       rec[slot] = read;
       await putRecord(rec);
       if (!listView.hidden) renderList();
       if (!homeView.hidden) renderHome();
+      if (!calendarView.hidden) renderCalendar();
     }
   } catch (e) {
     console.error("ocr record update failed", e);
@@ -3381,7 +3383,7 @@ lightboxCloseBtn.addEventListener("click", (ev) => {
 const PENDING_SHOT_KEY = "koutsuu-kiroku-pending-shot";
 function markPendingShot() {
   try {
-    sessionStorage.setItem(PENDING_SHOT_KEY, JSON.stringify({ date: currentDetailDate, slot: pendingSlot, at: Date.now() }));
+    sessionStorage.setItem(PENDING_SHOT_KEY, JSON.stringify({ date: currentDetailDate, slot: pendingSlot, from: detailReturnTarget, at: Date.now() }));
   } catch (e) {}
 }
 function clearPendingShot() {
@@ -3419,7 +3421,8 @@ async function checkPendingShot() {
   if (!p) return;
   alert("撮影中にアプリが読み込み直されたため、写真を保存できませんでした。\nお手数ですが、もう一度撮影してください。");
   homeView.hidden = true;
-  await openDetail(p.date);
+  if (p.from === "calendar") calPeriodStart = periodStartFor(new Date(p.date + "T00:00:00"));
+  await openDetail(p.date, { from: p.from === "calendar" ? "calendar" : "list" });
   if (detailView.hidden) homeView.hidden = false; // 開けなかったときに、画面が真っ白のままにならないようにする
 }
 
@@ -3779,6 +3782,8 @@ async function renderCalendar() {
       sub = "—";
     }
     cell.innerHTML = `<span class="calNum">${label}</span><span class="calSub">${escapeHtml(sub)}</span>`;
+    const stText = { ok: "できた", half: "途中", none: "未入力", off: "乗らない・休み", fut: "これから" }[st];
+    cell.setAttribute("aria-label", `${dateObj.getMonth() + 1}月${dateObj.getDate()}日 ${stText}${sub && st !== "none" && st !== "off" ? " " + sub : ""}`);
     if (st === "fut") cell.disabled = true;
     else cell.addEventListener("click", () => openDetailFromCalendar(key));
     calGrid.appendChild(cell);
@@ -3836,10 +3841,14 @@ async function goToNextOpenDay() {
 async function markNoDrive() {
   const key = currentDetailDate;
   if (!key) return;
-  const hasInput = startInput.value !== "" || endInput.value !== "" || destinationInput.value.trim() !== "";
+  // 開始距離は前の日の終了が自動で入るだけのことがあるので、保存済みの記録か、この画面で触ったかで判断する
+  const saved = await getRecord(key, { images: false });
+  const hasInput = detailDirty || !!(saved && (saved.start != null || saved.end != null || saved.destination));
   if (hasInput && !confirm("入っている距離・行き先を消して、「乗らなかった」にします。よろしいですか？")) return;
+  cancelOcrForSlot(key, "start"); // 写真の読み取り結果が、あとから入らないようにする
+  cancelOcrForSlot(key, "end");
   try {
-    const rec = (await getRecord(key, { images: false })) || { date: key };
+    const rec = saved || { date: key };
     await putRecord({ ...rec, date: key, destination: "", start: null, end: null, hasBreak: false, start2: null, end2: null, noDrive: true, updatedAt: Date.now() });
   } catch (err) {
     console.error("noDrive save failed", err);
@@ -4006,7 +4015,7 @@ function renderCalUnassigned() {
   calUnassignedBox.hidden = calUnassigned.length === 0;
   calUnassignedList.innerHTML = "";
   const todayKey = fmtKey(new Date());
-  calUnassigned.forEach((item, idx) => {
+  calUnassigned.forEach((item) => {
     const row = document.createElement("div");
     row.className = "calUnassignedRow";
     row.innerHTML =
@@ -4025,12 +4034,21 @@ function renderCalUnassigned() {
         alert("今日までの日付を選んでください");
         return;
       }
-      if (!(await placeCalendarPhoto(key, slotSel.value, item.blob))) {
+      if (btn.disabled) return;
+      btn.disabled = true; // 二度押しで同じ写真が二重に入らないように
+      let ok = false;
+      try {
+        ok = await placeCalendarPhoto(key, slotSel.value, item.blob);
+      } finally {
+        btn.disabled = false;
+      }
+      if (!ok) {
         alert("その日の、その欄には写真がもう入っています。記録画面から差し替えてください");
         return;
       }
       URL.revokeObjectURL(item.url);
-      calUnassigned.splice(idx, 1);
+      const at = calUnassigned.indexOf(item);
+      if (at >= 0) calUnassigned.splice(at, 1);
       if (!calUnassigned.length) calNotice.hidden = true; // 「下で日付を選んで」の案内を残さない
       await renderCalendar();
     });
